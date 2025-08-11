@@ -6,7 +6,7 @@ export const routes: RouteObject[] = [
   {
     path: '/dashboard',
     element: <Dashboard/>,
-  } 
+  }
 ];
 
 export const router = createBrowserRouter(routes);
