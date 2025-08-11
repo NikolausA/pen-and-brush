@@ -1,11 +1,11 @@
 import { type RouteObject, createBrowserRouter } from 'react-router';
 
-import { Dashboard } from '@/pages/dashboard/dashboard';
+import { Home } from '@/pages';
 
 export const routes: RouteObject[] = [ 
   {
-    path: '/dashboard',
-    element: <Dashboard/>,
+    path: '/',
+    element: <Home/>,
   }
 ];
 
