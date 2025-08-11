@@ -2,7 +2,7 @@ import { Provider } from 'react-redux'
 import { createRoot } from 'react-dom/client'
 
 import { store } from '@/core/store'
-import { App } from '@/app'
+import { App } from './app'
 
 import '@/styles/index.css'
 
