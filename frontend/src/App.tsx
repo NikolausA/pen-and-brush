@@ -1,11 +1,3 @@
-import "./App.css";
+import { AppRouter } from "@/routes";
 
-function App() {
-  return (
-    <>
-      <h1 className="text-3xl font-bold underline">Let's draw your wishes</h1>
-    </>
-  );
-}
-
-export default App;
+export const App = () => <AppRouter />;
