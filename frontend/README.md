@@ -22,4 +22,4 @@
 3. State manager ???
 4. SCSS
 5. Tailwind CSS
-6. In process...
+6. Konva.js + react-konva
