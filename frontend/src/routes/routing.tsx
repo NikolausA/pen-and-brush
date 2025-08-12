@@ -1,4 +1,4 @@
-import { Project } from "@/components/ordinary";
+import { Project } from "@/components/ordinary/project/project";
 import { ProjectsList } from "@/components/smart";
 import { Routes, Route } from "react-router-dom";
 
