@@ -5,12 +5,14 @@ import styles from './button.module.scss';
 export const Button = ({ 
   onClick, 
   children, 
-  variant = 'primary' 
+  variant = 'primary',
+  disabled = false,
 }: IButtonProps) => {
   return (
     <button
       onClick={onClick}
-      className={variant === 'primary' ? styles.primaryButton : styles.secondaryButton}
+      className={`${variant === 'primary' ? styles.primaryButton : styles.secondaryButton} ${disabled ? styles.disabled : ''}`}
+      disabled={disabled}
     >
       {children}
     </button>
