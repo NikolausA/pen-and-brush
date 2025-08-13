@@ -8,7 +8,8 @@ export const Input = ({
   type, 
   value, 
   onChange, 
-  placeholder 
+  placeholder,
+  error
 }: IInputProps) => {
   return (
     <div className={styles.formGroup}>
@@ -20,9 +21,10 @@ export const Input = ({
         type={type}
         value={value}
         onChange={onChange}
-        className={styles.input}
+        className={`${styles.input} ${error ? styles.inputError : ''}`}
         placeholder={placeholder}
       />
+      {error && <span className={styles.errorMessage}>{error}</span>}
     </div>
   );
 };

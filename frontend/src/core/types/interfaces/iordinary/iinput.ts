@@ -7,6 +7,7 @@ export interface IInputProps {
   value: string | number;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
+  error?: string;
 }
 
 export interface IInputConfig {
