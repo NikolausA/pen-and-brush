@@ -1,3 +1,5 @@
+import clsx from 'clsx';
+
 import type { IButtonProps } from '@/core/types/interfaces';
 
 import styles from './button.module.scss';
@@ -10,7 +12,11 @@ export const Button = ({
   return (
     <button
       onClick={onClick}
-      className={variant === 'primary' ? styles.primaryButton : styles.secondaryButton}
+      className={clsx({
+        [styles.primaryButton]: variant === 'primary',
+        [styles.secondaryButton]: variant === 'secondary',
+        [styles.dangerButton]: variant === 'danger'
+      })}
     >
       {children}
     </button>

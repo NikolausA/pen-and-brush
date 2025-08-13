@@ -1,4 +1,4 @@
-import { FaArrowRight } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
 
 import type { IButtonPrimaryProps } from '@/core/types/interfaces';
 
@@ -10,7 +10,7 @@ export const ButtonPrimary = ({ text, onClick }: IButtonPrimaryProps) => {
     <button className={styles.button} onClick={onClick}>
       <span className={styles.buttonText}>{text}</span>
       <span className={styles.buttonIcon}>
-        <FaArrowRight size={20} />
+        <FaPlus size={20} />
       </span>
     </button>
   );

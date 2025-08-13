@@ -6,5 +6,5 @@ export interface IButtonPrimaryProps {
 export interface IButtonProps {
   onClick: () => void;
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'danger';
 }
