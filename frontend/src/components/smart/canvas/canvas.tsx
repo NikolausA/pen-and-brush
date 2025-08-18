@@ -1,9 +1,8 @@
-import { Stage } from 'react-konva';
+import { Stage } from "react-konva";
 
-import type { ICanvasProps } from '@/core/types/interfaces/ismart/icanvas';
+import type { ICanvasProps } from "@/core/types/interfaces/ismart/icanvas";
 
-import styles from './canvas.module.css';
-
+import styles from "./canvas.module.scss";
 
 export const Canvas = ({
   width,
