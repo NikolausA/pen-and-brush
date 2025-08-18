@@ -1,1 +1,1 @@
-export * from './input-data-modal/input-data-modal'
+export * from './input-data-modal'

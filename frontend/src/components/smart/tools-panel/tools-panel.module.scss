@@ -1,0 +1,168 @@
+.panel {
+  position: absolute;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  z-index: 1;
+  cursor: default;
+  width: 56px; 
+
+  &.dragging {
+    opacity: 0.7;
+    cursor: grabbing;
+  }
+}
+
+.dragHandle {
+  padding: 6px;
+  cursor: grab;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #9ca3af;
+  transition: color 0.15s ease;
+  width: 100%;
+
+  &:hover {
+    color: #6b7280;
+  }
+}
+
+.currentTool {
+  font-size: 12px;
+  color: #4b5563;
+  text-align: center;
+  padding: 4px 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.toolsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.toolButton,
+.shapeButton {
+  background: transparent;
+  border: none;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  position: relative;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: #f3f4f6;
+  }
+
+  &.active,
+  &.activeShape {
+    background: #dbeafe;
+    color: #2563eb;
+    box-shadow: 0 0 0 2px #3b82f6;
+  }
+}
+
+.colorIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: #f9fafb;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.colorSwatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid #d1d5db;
+}
+
+.shapePanel {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  margin-left: 8px;
+  border: 1px solid #e5e7eb;
+  width: auto;
+}
+
+.colorPalette {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  margin-left: 8px;
+  border: 1px solid #e5e7eb;
+  width: auto;
+}
+
+.panelTitle {
+  font-size: 12px;
+  color: #4b5563;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.shapesRow {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.colorsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.colorButton {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid #d1d5db;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  &.activeColor {
+    box-shadow: 0 0 0 2px #3b82f6, 0 0 0 4px rgba(59, 130, 246, 0.3);
+  }
+}

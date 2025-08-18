@@ -1,10 +1,3 @@
-import { Routing } from "@/routes/routing";
-import { AppRouter } from "@/core/providers/AppRouter";
+import { AppRouter } from "./routes";
 
-export const App = () => {
-  return (
-    <AppRouter>
-      <Routing />
-    </AppRouter>
-  );
-};
+export const App = () => <AppRouter />;
