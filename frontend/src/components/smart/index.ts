@@ -1,2 +1,3 @@
 export { Canvas } from "./canvas/canvas";
-export { ProjectsList } from "./projects-list/ProjectsList";
+export { ProjectList } from "./project-list";
+export { ToolsPanel } from "./tools-panel/tools-panel";
