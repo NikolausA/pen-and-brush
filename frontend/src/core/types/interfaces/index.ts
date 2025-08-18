@@ -3,4 +3,4 @@ export * from "./iordinary/iinput";
 export * from "./isimple/inew-project-modal";
 export * from "./isimple/iproject-card-and-list";
 export * from "./ismart/icanvas";
-export type { ToolType, GraphicObject } from "./igraphic-object";
+export type { ToolType, GraphicObject, Layer } from "./igraphic-object";

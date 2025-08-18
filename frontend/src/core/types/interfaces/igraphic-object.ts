@@ -1,3 +1,10 @@
+export interface Layer {
+  id: string;
+  name: string;
+  opacity: number;
+  visible: boolean;
+}
+
 export interface Rectangle {
   x: number;
   y: number;
@@ -40,4 +47,5 @@ export interface GraphicObject {
   id: string;
   type: ToolType;
   props: GraphicProps;
+  layerId: Layer["id"];
 }
