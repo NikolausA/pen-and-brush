@@ -43,9 +43,51 @@ export type ToolType = "brush" | "eraser" | "line" | "circle" | "rect";
 
 export type GraphicProps = FreeDrawProps | Line | Circle | Rectangle;
 
-export interface GraphicObject {
+export interface BrushObject {
   id: string;
-  type: ToolType;
-  props: GraphicProps;
+  type: "brush";
+  props: FreeDrawProps;
   layerId: Layer["id"];
 }
+
+export interface EraserObject {
+  id: string;
+  type: "eraser";
+  props: FreeDrawProps;
+  layerId: Layer["id"];
+}
+
+export interface LineObject {
+  id: string;
+  type: "line";
+  props: Line;
+  layerId: Layer["id"];
+}
+
+export interface CircleObject {
+  id: string;
+  type: "circle";
+  props: Circle;
+  layerId: Layer["id"];
+}
+
+export interface RectObject {
+  id: string;
+  type: "rect";
+  props: Rectangle;
+  layerId: Layer["id"];
+}
+
+export type GraphicObject =
+  | BrushObject
+  | EraserObject
+  | LineObject
+  | CircleObject
+  | RectObject;
+
+// export interface GraphicObject {
+//   id: string;
+//   type: ToolType;
+//   props: GraphicProps;
+//   layerId: Layer["id"];
+// }
