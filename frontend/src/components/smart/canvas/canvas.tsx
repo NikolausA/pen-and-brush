@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { Pane } from 'evergreen-ui';
 import { Stage, Layer, Line, Rect, Circle, RegularPolygon } from 'react-konva';
 

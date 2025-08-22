@@ -1,0 +1,56 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=u
+      - DB_PASSWORD=q
+      - DB_NAME=graphic_editor
+    ports:
+      - "1221:1221"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "1331:1331"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=graphic_editor
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U u -d graphic_editor || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db-data:

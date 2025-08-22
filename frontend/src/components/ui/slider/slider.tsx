@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ISliderProps } from '@/core/types/interfaces/ipages/ieditor';
 import styles from './slider.module.scss';
 

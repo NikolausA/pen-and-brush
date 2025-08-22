@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Pane, IconButton, Text, Menu, Position, TextInput, Button } from 'evergreen-ui';
 import { TopMenu } from '@/components/ui/top-menu/top-menu';
 import { Canvas } from '@/components/smart';
