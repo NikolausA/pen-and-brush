@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProject, getProjects, deleteProject } = require('../controllers/project-controller.js');
+const { createProject, getProjects, deleteProject, updateProject } = require('../controllers/project-controller.js');
 
 const router = express.Router();
 
@@ -50,6 +50,29 @@ const router = express.Router();
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/Layer'
+ *     Layer:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         projectId:
+ *           type: string
+ *         name:
+ *           type: string
+ *         order:
+ *           type: integer
+ *         isVisible:
+ *           type: boolean
+ *         opacity:
+ *           type: number
+ *         data:
+ *           type: object
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
  */
 router.get('/', getProjects);
 
@@ -87,6 +110,50 @@ router.get('/', getProjects);
  *         description: Internal server error
  */
 router.post('/', createProject);
+
+/**
+ * @swagger
+ * /projects/{projectId}:
+ *   patch:
+ *     summary: Update a project and its layers
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the project
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               width:
+ *                 type: integer
+ *               height:
+ *                 type: integer
+ *               layers:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/Layer'
+ *     responses:
+ *       200:
+ *         description: Project updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Project'
+ *       404:
+ *         description: Project not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/:projectId', updateProject);
 
 /**
  * @swagger
