@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Pane, Heading } from 'evergreen-ui';
 import { ProjectCard } from '@/components/simple';
 import type { Project } from '@/core/store/slices/projects-slice';

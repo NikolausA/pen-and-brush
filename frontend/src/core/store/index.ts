@@ -1,15 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
 import canvasReducer from "@/core/store/slices/canvas-slice";
-
-import { api } from "../api";
+import projectsReducer from "@/core/store/slices/projects-slice";
 
 export const store = configureStore({
   reducer: {
     canvas: canvasReducer,
-    [api.reducerPath]: api.reducer,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(api.middleware),
+    projects: projectsReducer,
+  }
 });
 
 export type RootState = ReturnType<typeof store.getState>;

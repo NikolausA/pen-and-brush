@@ -4,7 +4,7 @@ import { Pane, majorScale } from 'evergreen-ui';
 import { NewProjectModal } from '@/components/simple';
 import { ProjectList } from '@/components/smart';
 import { HeaderHome } from '@/components/ui';
-import { getProjects, createProject, setCurrentProject } from '@/core/store/slices/projects-slice';
+import { getProjects, createProject, setCurrentProject, clearError, deleteProject } from '@/core/store/slices/projects-slice';
 import type { RootState, AppDispatch } from '@/core/store';
 
 export const Home = () => {
@@ -14,6 +14,8 @@ export const Home = () => {
   const { projects, loading, error } = useSelector((state: RootState) => state.projects);
 
   useEffect(() => {
+    console.log('Redux State:', { projects, loading, error });
+    dispatch(clearError());
     dispatch(getProjects());
   }, [dispatch]);
 
