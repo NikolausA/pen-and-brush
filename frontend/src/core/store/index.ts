@@ -1,12 +1,18 @@
 import { configureStore } from "@reduxjs/toolkit";
-import canvasReducer from "@/core/store/slices/canvas-slice";
-import projectsReducer from "@/core/store/slices/projects-slice";
+import { api } from "./api";
+import { apiMock } from "./api-mock";
+import toolReducer from "./slices/tool-slice";
+import graphicObjectsReducer from "./slices/graphicObjectSlice";
 
 export const store = configureStore({
   reducer: {
-    canvas: canvasReducer,
-    projects: projectsReducer,
-  }
+    [api.reducerPath]: api.reducer,
+    [apiMock.reducerPath]: apiMock.reducer,
+    tool: toolReducer,
+    graphicObjects: graphicObjectsReducer,
+  },
+  middleware: (getDefault) =>
+    getDefault().concat(api.middleware, apiMock.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

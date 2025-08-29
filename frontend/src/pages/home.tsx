@@ -1,20 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { Pane, majorScale } from 'evergreen-ui';
-import { NewProjectModal } from '@/components/simple';
-import { ProjectList } from '@/components/smart';
-import { HeaderHome } from '@/components/ui';
-import { getProjects, createProject, setCurrentProject, clearError, deleteProject } from '@/core/store/slices/projects-slice';
-import type { RootState, AppDispatch } from '@/core/store';
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { Pane, majorScale } from "evergreen-ui";
+import { NewProjectModal } from "@/components/simple";
+import { ProjectList } from "@/components/smart";
+import { HeaderHome } from "@/components/ui";
+import {
+  getProjects,
+  createProject,
+  setCurrentProject,
+  clearError,
+  deleteProject,
+} from "@/core/store/slices/projects-slice";
+import type { RootState, AppDispatch } from "@/core/store";
 
 export const Home = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { projects, loading, error } = useSelector((state: RootState) => state.projects);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { projects, loading, error } = useSelector(
+    (state: RootState) => state.projects
+  );
 
   useEffect(() => {
-    console.log('Redux State:', { projects, loading, error });
+    console.log("Redux State:", { projects, loading, error });
     dispatch(clearError());
     dispatch(getProjects());
   }, [dispatch]);
@@ -34,7 +42,7 @@ export const Home = () => {
     dispatch(deleteProject(id));
   };
 
-  const filteredProjects = projects.filter(project =>
+  const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

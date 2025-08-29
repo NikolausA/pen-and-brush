@@ -1,17 +1,16 @@
-import { type RouteObject, createBrowserRouter } from 'react-router-dom';
-import { Home, Editor } from '@/pages';
+import { type RouteObject, createBrowserRouter } from "react-router-dom";
+import { Home, Editor } from "@/pages";
 
 export const routes: RouteObject[] = [
   {
-    path: '/',
+    path: "/",
     element: <Home />,
-    errorElement: <div>Ошибка загрузки главной страницы</div>, 
+    errorElement: <div>Ошибка загрузки главной страницы</div>,
   },
   {
-    path: '/projects/:id',
+    path: "/projects/:id",
     element: <Editor />,
-    errorElement: <div>Проект не найден</div>, 
-
+    errorElement: <div>Проект не найден</div>,
   },
 ];
 
