@@ -20,6 +20,10 @@ export const Home = () => {
 
   const { data: projects, isLoading, isError, error } = useGetProjectsQuery();
 
+  if (isError) {
+    console.log(error);
+  }
+
   const handleClick = () => setIsModalOpen(true);
 
   const handleCreateProject = (name: string, width: number, height: number) => {
@@ -35,19 +39,10 @@ export const Home = () => {
     dispatch(deleteProject(id));
   };
 
-  if (isLoading) {
-    <Pane>Loading...</Pane>;
-  }
-  if (isError) {
-    <Pane color="danger">Error: {String(error)}</Pane>;
-  }
-  if (!projects || projects.length === 0) {
-    return <Pane>Нет проектов</Pane>;
-  }
-
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProjects =
+    projects?.filter((project) =>
+      project.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ) ?? [];
 
   return (
     <Pane
@@ -67,7 +62,14 @@ export const Home = () => {
         onSearchChange={setSearchQuery}
       />
 
-      <ProjectList projects={filteredProjects} onDelete={handleDelete} />
+      {isLoading && <Pane>Loading...</Pane>}
+      {/* {isError && <Pane color="danger">{error.error}</Pane>} */}
+
+      {filteredProjects.length > 0 ? (
+        <ProjectList projects={filteredProjects} onDelete={handleDelete} />
+      ) : (
+        <Pane marginTop={majorScale(2)}>Нет проектов</Pane>
+      )}
       <NewProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
