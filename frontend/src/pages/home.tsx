@@ -1,31 +1,24 @@
-import { useState, useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { Pane, majorScale } from "evergreen-ui";
 import { NewProjectModal } from "@/components/simple";
 import { ProjectList } from "@/components/smart";
 import { HeaderHome } from "@/components/ui";
 import {
-  getProjects,
   createProject,
   setCurrentProject,
-  clearError,
   deleteProject,
 } from "@/core/store/slices/projects-slice";
-import type { RootState, AppDispatch } from "@/core/store";
+// import type { RootState, AppDispatch } from "@/core/store";
+import type { AppDispatch } from "@/core/store";
+import { useGetProjectsQuery } from "@/core/store/api";
 
 export const Home = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { projects, loading, error } = useSelector(
-    (state: RootState) => state.projects
-  );
 
-  useEffect(() => {
-    console.log("Redux State:", { projects, loading, error });
-    dispatch(clearError());
-    dispatch(getProjects());
-  }, [dispatch]);
+  const { data: projects, isLoading, isError, error } = useGetProjectsQuery();
 
   const handleClick = () => setIsModalOpen(true);
 
@@ -41,6 +34,16 @@ export const Home = () => {
   const handleDelete = (id: string) => {
     dispatch(deleteProject(id));
   };
+
+  if (isLoading) {
+    <Pane>Loading...</Pane>;
+  }
+  if (isError) {
+    <Pane color="danger">Error: {String(error)}</Pane>;
+  }
+  if (!projects || projects.length === 0) {
+    return <Pane>Нет проектов</Pane>;
+  }
 
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -63,8 +66,7 @@ export const Home = () => {
         onButtonClick={handleClick}
         onSearchChange={setSearchQuery}
       />
-      {loading && <Pane>Loading...</Pane>}
-      {error && <Pane color="danger">{error}</Pane>}
+
       <ProjectList projects={filteredProjects} onDelete={handleDelete} />
       <NewProjectModal
         isOpen={isModalOpen}

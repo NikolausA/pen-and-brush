@@ -98,3 +98,16 @@ export const api = createApi({
     }),
   }),
 });
+
+export const {
+  useGetProjectsQuery,
+  useGetProjectByIdQuery,
+  useCreateProjectMutation,
+  useDeleteProjectMutation,
+  useGetLayersQuery,
+  useCreateLayerMutation,
+  useUpdateLayerMutation,
+  useDeleteLayerMutation,
+  useGetHistoryQuery,
+  useAddHistoryMutation,
+} = api;
