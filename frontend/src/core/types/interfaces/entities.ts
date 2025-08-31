@@ -33,8 +33,8 @@ export type ToolType = "brush" | "eraser" | "line" | "rectangle" | "circle";
 
 export interface Tool {
   activeTool: ToolType;
-  lineWidth: number; // 1–6
-  strokeColor: string; // HEX
-  fillColor?: string; // для фигур
-  cursor: string; // url() или preset
+  lineWidth: number;
+  strokeColor: string;
+  fillColor?: string;
+  cursor: string;
 }
