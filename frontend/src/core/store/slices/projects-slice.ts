@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import { config } from '@/core/config/config'
 
-interface Project {
+export interface Project {
   id: string;
   name: string;
   width: number;
@@ -47,12 +47,12 @@ export const getProjects = createAsyncThunk<Project[], void, { rejectValue: stri
           'Content-Type': 'application/json',
         },
       });
-      const text = await response.text(); 
+      const text = await response.text();
       console.log('Fetch Response:', response.status, text);
       if (!response.ok) {
         throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText}`);
       }
-      const data: Project[] = JSON.parse(text); 
+      const data: Project[] = JSON.parse(text);
       return data;
     } catch (error) {
       console.error('Fetch Error:', error);
