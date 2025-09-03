@@ -1,3 +1,4 @@
 export { Home } from "./home";
-export { Editor } from "./editor";
 export { MockProjects } from "./mock-projects";
+export { EditorPage } from "./EditorPage";
+export { TempEditorPage } from "./TempEditorPage";

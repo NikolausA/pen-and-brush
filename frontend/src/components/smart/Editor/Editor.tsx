@@ -1,9 +1,9 @@
 // frontend/src/pages/editor.tsx
 import { Pane } from "evergreen-ui";
-import { TopMenu } from "@/components/ui/top-menu/top-menu";
+import { TopMenu } from "@/components/ui/top-menu/top-menu.tsx";
 import { Canvas } from "@/components/smart";
 import { ToolsPanel } from "@/components/smart";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, FC } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -12,20 +12,19 @@ import {
   OpacityControl,
   HistoryList,
 } from "@/components/smart";
-import type { DrawingElement } from "@/core/types/interfaces/ipages/ieditor";
+import type { DrawingElement } from "@/core/types/interfaces/ipages/ieditor.ts";
 import type {
   GraphicObject,
   GraphicObjectType,
-} from "@/core/types/interfaces/igraphic-objects";
-import type { Layer as BackendLayer } from "@/core/types/interfaces/entities";
-import { useParams } from "react-router-dom";
+} from "@/core/types/interfaces/igraphic-objects.ts";
+import type { Layer as BackendLayer } from "@/core/types/interfaces/entities.ts";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/core/store";
-import { setActiveTool, setStrokeColor } from "@/core/store/slices/tool-slice";
+import { setActiveTool, setStrokeColor } from "@/core/store/slices/tool-slice.ts";
 import {
   addObject,
   clearLayerObjects,
-} from "@/core/store/slices/graphicObjectSlice";
+} from "@/core/store/slices/graphicObjectSlice.ts";
 import {
   useGetLayersQuery,
   useCreateLayerMutation,
@@ -33,10 +32,13 @@ import {
   useDeleteLayerMutation,
   useGetHistoryQuery,
   useAddHistoryMutation,
-} from "@/core/store/api";
+} from "@/core/store/api.ts";
 
-export const Editor = () => {
-  const { id: projectId } = useParams<{ id: string }>();
+interface EditorProps{
+  projectId: string;
+}
+
+export const Editor:FC<EditorProps> = ({projectId}) => {
   const dispatch = useDispatch();
   const activeTool = useSelector((state: RootState) => state.tool.activeTool);
   const activeColor = useSelector((state: RootState) => state.tool.strokeColor);

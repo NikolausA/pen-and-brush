@@ -3,7 +3,7 @@ import { Pane } from "evergreen-ui";
 import { Stage, Layer, Line, Rect, Circle, RegularPolygon } from "react-konva";
 
 import styles from "./canvas.module.scss";
-import type { DrawingElement } from "@/pages/editor";
+import type { DrawingElement } from "@/components/smart/Editor/Editor.tsx";
 
 interface CanvasProps {
   width: number;
