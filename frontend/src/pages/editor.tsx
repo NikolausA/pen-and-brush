@@ -1,277 +1,393 @@
-// @ts-nocheck
-import { Pane, IconButton, Text, Menu, Position, TextInput, Button } from 'evergreen-ui';
-import { TopMenu } from '@/components/ui/top-menu/top-menu';
-import { Canvas } from '@/components/smart';
-import { ToolsPanel } from '@/components/smart';
-import { useState, useCallback, useRef } from 'react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Slider } from '@/components/ui';
-import type { DrawingElement, HistoryItem, Layer } from '@/core/types/interfaces/ipages/ieditor';
-
-
+// frontend/src/pages/editor.tsx
+import { Pane } from "evergreen-ui";
+import { TopMenu } from "@/components/ui/top-menu/top-menu";
+import { Canvas } from "@/components/smart";
+import { ToolsPanel } from "@/components/smart";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import {
+  LayerCreator,
+  LayersList,
+  OpacityControl,
+  HistoryList,
+} from "@/components/smart";
+import type { DrawingElement } from "@/core/types/interfaces/ipages/ieditor";
+import type {
+  GraphicObject,
+  GraphicObjectType,
+} from "@/core/types/interfaces/igraphic-objects";
+import type { Layer as BackendLayer } from "@/core/types/interfaces/entities";
+import { useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "@/core/store";
+import { setActiveTool, setStrokeColor } from "@/core/store/slices/tool-slice";
+import {
+  addObject,
+  clearLayerObjects,
+} from "@/core/store/slices/graphicObjectSlice";
+import {
+  useGetLayersQuery,
+  useCreateLayerMutation,
+  useUpdateLayerMutation,
+  useDeleteLayerMutation,
+  useGetHistoryQuery,
+  useAddHistoryMutation,
+} from "@/core/store/api";
 
 export const Editor = () => {
-  const [activeTool, setActiveTool] = useState('brush');
-  const [activeColor, setActiveColor] = useState('#000000');
-  const [layers, setLayers] = useState<Layer[]>([
-    {
-      id: 'layer-1',
-      name: 'Слой 1',
-      visible: true,
-      opacity: 100,
-      elements: [],
-    },
-  ]);
-  const [activeLayerId, setActiveLayerId] = useState('layer-1');
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [renamingLayerId, setRenamingLayerId] = useState<string | null>(null);
-  const [newLayerName, setNewLayerName] = useState('');
-  const isDrawing = useRef(false);
-  const draftElement = useRef<DrawingElement | null>(null);
+  const { id: projectId } = useParams<{ id: string }>();
+  const dispatch = useDispatch();
+  const activeTool = useSelector((state: RootState) => state.tool.activeTool);
+  const activeColor = useSelector((state: RootState) => state.tool.strokeColor);
+  const { data: layersData, isLoading: layersLoading } = useGetLayersQuery(
+    projectId!,
+    { skip: !projectId }
+  );
+  const { data: historyData } = useGetHistoryQuery(projectId!, {
+    skip: !projectId,
+  });
+  const [createLayer] = useCreateLayerMutation();
+  const [updateLayer] = useUpdateLayerMutation();
+  const [deleteLayer] = useDeleteLayerMutation();
+  const [addHistory] = useAddHistoryMutation();
+
+  const [activeLayerId, setActiveLayerId] = useState<string | null>(null);
+  const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<
+    number | null
+  >(null);
+  const [draft, setDraft] = useState<GraphicObject | null>(null);
+  const isDrawingRef = useRef(false);
   const nextId = useRef(0);
 
-  const activeLayer = layers.find(layer => layer.id === activeLayerId) || layers[0];
+  const activeLayer =
+    layersData?.find((layer) => layer.id === activeLayerId) || layersData?.[0];
 
-  const handleToolSelect = (tool: string) => {
-    setActiveTool(tool);
-  };
-
-  const handleColorSelect = (color: string) => {
-    setActiveColor(color);
-  };
-
-  const handleMouseDown = useCallback((pos: { x: number; y: number }) => {
-    isDrawing.current = true;
-    const id = `element-${nextId.current++}`;
-    
-    if (activeTool === 'brush' || activeTool === 'eraser') {
-      draftElement.current = {
-        id,
-        type: activeTool as 'brush' | 'eraser',
-        points: [pos.x, pos.y],
-        color: activeTool === 'eraser' ? '#ffffff' : activeColor,
-      };
-    } else {
-      draftElement.current = {
-        id,
-        type: activeTool as 'rectangle' | 'circle' | 'triangle',
-        x: pos.x,
-        y: pos.y,
-        width: 0,
-        height: 0,
-        color: activeColor,
-      };
+  // Set initial active layer
+  useEffect(() => {
+    if (layersData && layersData.length > 0 && activeLayerId === null) {
+      setActiveLayerId(layersData[0].id);
     }
-    
-    setHistory(prev => [...prev, {
-      id: `history-${Date.now()}`,
-      description: `Добавлен ${activeTool === 'brush' ? 'кисть' : 
-                  activeTool === 'eraser' ? 'ластик' : 
-                  activeTool === 'rectangle' ? 'прямоугольник' :
-                  activeTool === 'circle' ? 'круг' : 'треугольник'}`,
-      state: layers.map(layer => ({
-        ...layer,
-        elements: [...layer.elements]
-      })),
-    }]);
+  }, [layersData, activeLayerId]);
 
-    setLayers(prev => prev.map(layer => {
-      if (layer.id === activeLayerId) {
-        return {
-          ...layer,
-          elements: [...layer.elements, draftElement.current!],
-        };
-      }
-      return layer;
-    }));
-  }, [activeTool, activeColor, activeLayerId, layers]);
+  // Update active layer if the current one is deleted
+  useEffect(() => {
+    if (
+      layersData &&
+      activeLayerId &&
+      !layersData.some((layer) => layer.id === activeLayerId)
+    ) {
+      setActiveLayerId(layersData[0]?.id || null);
+    }
+  }, [layersData, activeLayerId]);
 
-  const handleMouseMove = useCallback((pos: { x: number; y: number }) => {
-    if (!isDrawing.current || !draftElement.current) return;
+  const mapToolToGraphicType = (tool: string): GraphicObjectType => {
+    switch (tool) {
+      case "brush":
+      case "eraser":
+        return "freePath";
+      case "line":
+        return "line";
+      case "rectangle":
+        return "rect";
+      case "circle":
+        return "circle";
+      default:
+        return "freePath";
+    }
+  };
 
-    setLayers(prev => prev.map(layer => {
-      if (layer.id === activeLayerId) {
-        const updatedElements = [...layer.elements];
-        const lastIndex = updatedElements.length - 1;
-        
-        if (activeTool === 'brush' || activeTool === 'eraser') {
-          updatedElements[lastIndex] = {
-            ...updatedElements[lastIndex],
-            points: [...(updatedElements[lastIndex].points || []), pos.x, pos.y]
+  const handleToolSelect = useCallback(
+    (tool: string) => {
+      dispatch(
+        setActiveTool(
+          tool as "brush" | "eraser" | "line" | "rectangle" | "circle"
+        )
+      );
+    },
+    [dispatch]
+  );
+
+  const handleColorSelect = useCallback(
+    (color: string) => {
+      dispatch(setStrokeColor(color));
+    },
+    [dispatch]
+  );
+
+  const handleMouseDown = useCallback(
+    (pos: { x: number; y: number }) => {
+      if (!layersData || !activeLayerId) return;
+
+      addHistory({
+        projectId: projectId!,
+        data: {
+          action: `Добавлен элемент: ${activeTool}`,
+          data: { layers: layersData },
+        },
+      });
+
+      isDrawingRef.current = true;
+      const id = `element-${nextId.current++}`;
+      const graphicType = mapToolToGraphicType(activeTool); // Use the function here
+
+      const newDraft: GraphicObject = {
+        id,
+        layerId: activeLayerId,
+        type: graphicType,
+        strokeColor: activeTool === "eraser" ? "#ffffff" : activeColor,
+        strokeWidth: graphicType === "freePath" ? 5 : 1,
+        ...(graphicType === "freePath" || graphicType === "line"
+          ? {
+              points:
+                graphicType === "line"
+                  ? [pos.x, pos.y, pos.x, pos.y]
+                  : [pos.x, pos.y],
+            }
+          : graphicType === "rect"
+          ? { x: pos.x, y: pos.y, width: 0, height: 0, fillColor: activeColor }
+          : { x: pos.x, y: pos.y, radius: 0, fillColor: activeColor }),
+      };
+
+      setDraft(newDraft);
+    },
+    [activeTool, activeColor, layersData, activeLayerId, addHistory, projectId]
+  );
+
+  const handleMouseMove = useCallback(
+    (pos: { x: number; y: number }) => {
+      if (!isDrawingRef.current || !draft) return;
+
+      setDraft((prev) => {
+        if (!prev) return null;
+        if (prev.type === "freePath") {
+          return {
+            ...prev,
+            points: [...(prev.points || []), pos.x, pos.y],
           };
-        } else {
-          updatedElements[lastIndex] = {
-            ...updatedElements[lastIndex],
-            width: pos.x - (updatedElements[lastIndex].x || 0),
-            height: pos.y - (updatedElements[lastIndex].y || 0)
+        } else if (prev.type === "line") {
+          return {
+            ...prev,
+            points: [prev.points[0], prev.points[1], pos.x, pos.y],
+          };
+        } else if (prev.type === "rect") {
+          return {
+            ...prev,
+            width: pos.x - (prev.x || 0),
+            height: pos.y - (prev.y || 0),
+          };
+        } else if (prev.type === "circle") {
+          const dx = pos.x - (prev.x || 0);
+          const dy = pos.y - (prev.y || 0);
+          return {
+            ...prev,
+            radius: Math.sqrt(dx * dx + dy * dy),
           };
         }
-        
-        return {
-          ...layer,
-          elements: updatedElements,
-        };
-      }
-      return layer;
-    }));
-  }, [activeTool, activeLayerId]);
+        return prev;
+      });
+    },
+    [draft]
+  );
 
   const handleMouseUp = useCallback(() => {
-    isDrawing.current = false;
-    draftElement.current = null;
+    isDrawingRef.current = false;
+    if (draft && activeLayer) {
+      dispatch(addObject(draft));
+      const updatedData = [
+        ...((activeLayer.data as GraphicObject[]) || []),
+        draft,
+      ];
+      updateLayer({ id: activeLayer.id, data: { data: updatedData } });
+    }
+    setDraft(null);
+  }, [draft, activeLayer, dispatch, updateLayer]);
+
+  const handleCreateLayer = useCallback(() => {
+    if (!layersData || !projectId) return;
+    const name = `Слой ${layersData.length + 1}`;
+    addHistory({
+      projectId: projectId,
+      data: {
+        action: `Создан слой ${name}`,
+        data: { layers: layersData },
+      },
+    });
+    createLayer({
+      projectId: projectId,
+      data: { name, isVisible: true, opacity: 100, data: [] },
+    })
+      .unwrap()
+      .then((newLayer) => setActiveLayerId(newLayer.id));
+  }, [layersData, projectId, addHistory, createLayer]);
+
+  const handleLayerSelect = useCallback((layerId: string) => {
+    setActiveLayerId(layerId);
   }, []);
 
-  const handleCreateLayer = () => {
-    const newLayerId = `layer-${Date.now()}`;
-    const newLayer: Layer = {
-      id: newLayerId,
-      name: `Слой ${layers.length + 1}`,
-      visible: true,
-      opacity: 100,
-      elements: [],
-    };
-
-    setHistory(prev => [...prev, {
-      id: `history-${Date.now()}`,
-      description: `Создан слой ${newLayer.name}`,
-      state: layers.map(layer => ({
-        ...layer,
-        elements: [...layer.elements]
-      })),
-    }]);
-
-    setLayers(prev => [...prev, newLayer]);
-    setActiveLayerId(newLayerId);
-  };
-
-  const handleLayerSelect = (layerId: string) => {
-    setActiveLayerId(layerId);
-  };
-
-  const handleToggleLayerVisibility = (layerId: string) => {
-    setHistory(prev => [...prev, {
-      id: `history-${Date.now()}`,
-      description: `Изменена видимость слоя`,
-      state: layers.map(layer => ({
-        ...layer,
-        elements: [...layer.elements]
-      })),
-    }]);
-
-    setLayers(prev => prev.map(layer => {
-      if (layer.id === layerId) {
-        return {
-          ...layer,
-          visible: !layer.visible,
-        };
+  const handleToggleLayerVisibility = useCallback(
+    (layerId: string) => {
+      if (!layersData) return;
+      addHistory({
+        projectId: projectId!,
+        data: {
+          action: `Изменена видимость слоя`,
+          data: { layers: layersData },
+        },
+      });
+      const layer = layersData.find((l) => l.id === layerId);
+      if (layer) {
+        updateLayer({ id: layerId, data: { isVisible: !layer.isVisible } });
       }
-      return layer;
-    }));
-  };
+    },
+    [layersData, projectId, addHistory, updateLayer]
+  );
 
-  const handleDeleteLayer = (layerId: string) => {
-    if (layers.length <= 1) return;
+  const handleDeleteLayer = useCallback(
+    (layerId: string) => {
+      if (!layersData || layersData.length <= 1) return;
+      addHistory({
+        projectId: projectId!,
+        data: {
+          action: `Удален слой`,
+          data: { layers: layersData },
+        },
+      });
+      dispatch(clearLayerObjects(layerId));
+      deleteLayer(layerId);
+    },
+    [layersData, projectId, addHistory, dispatch, deleteLayer]
+  );
 
-    setHistory(prev => [...prev, {
-      id: `history-${Date.now()}`,
-      description: `Удален слой`,
-      state: layers.map(layer => ({
-        ...layer,
-        elements: [...layer.elements]
-      })),
-    }]);
+  const handleOpacityChange = useCallback(
+    (value: number) => {
+      if (activeLayerId) {
+        updateLayer({ id: activeLayerId, data: { opacity: value } });
+      }
+    },
+    [activeLayerId, updateLayer]
+  );
 
-    const newLayers = layers.filter(layer => layer.id !== layerId);
-    setLayers(newLayers);
+  const handleRenameLayer = useCallback(
+    (layerId: string, newName: string) => {
+      if (!layersData || !projectId) return;
+      addHistory({
+        projectId: projectId,
+        data: {
+          action: `Переименован слой`,
+          data: { layers: layersData },
+        },
+      });
+      updateLayer({ id: layerId, data: { name: newName } });
+    },
+    [layersData, projectId, addHistory, updateLayer]
+  );
 
-    if (layerId === activeLayerId) {
-      setActiveLayerId(newLayers[0].id);
+  const handleHistoryItemClick = useCallback(
+    (index: number) => {
+      const selectedHistory = historyData?.[index];
+      if (selectedHistory && selectedHistory.data.layers) {
+        const selectedState = selectedHistory.data.layers as BackendLayer[];
+        Promise.all(
+          selectedState.map((layer: BackendLayer) =>
+            updateLayer({ id: layer.id, data: layer }).unwrap()
+          )
+        );
+        setSelectedHistoryIndex(index);
+      }
+    },
+    [historyData, updateLayer]
+  );
+
+  const mapGraphicObjectToDrawingElement = (
+    obj: GraphicObject
+  ): DrawingElement => {
+    switch (obj.type) {
+      case "freePath":
+        return {
+          id: obj.id,
+          type: obj.strokeColor === "#ffffff" ? "eraser" : "brush",
+          points: obj.points,
+          color: obj.strokeColor,
+        };
+      case "line":
+        return {
+          id: obj.id,
+          type: "brush", // Rendered as a brush stroke for simplicity
+          points: obj.points,
+          color: obj.strokeColor,
+        };
+      case "rect":
+        return {
+          id: obj.id,
+          type: "rectangle",
+          x: obj.x,
+          y: obj.y,
+          width: obj.width,
+          height: obj.height,
+          color: obj.fillColor || obj.strokeColor,
+        };
+      case "circle":
+        return {
+          id: obj.id,
+          type: "circle",
+          x: obj.x - (obj.radius || 0),
+          y: obj.y - (obj.radius || 0),
+          width: (obj.radius || 0) * 2,
+          height: (obj.radius || 0) * 2,
+          color: obj.fillColor || obj.strokeColor,
+        };
+      default:
+        return {
+          id: obj.id,
+          type: "brush",
+          points: [],
+          color: obj.strokeColor,
+        };
     }
   };
 
-  const handleOpacityChange = (value: number) => {
-    setLayers(prev => prev.map(layer => {
-      if (layer.id === activeLayerId) {
-        return {
-          ...layer,
-          opacity: value,
-        };
-      }
-      return layer;
-    }));
-  };
-
-  const startRenamingLayer = (layerId: string, currentName: string) => {
-    setRenamingLayerId(layerId);
-    setNewLayerName(currentName);
-  };
-
-  const handleRenameLayer = (layerId: string) => {
-    setHistory(prev => [...prev, {
-      id: `history-${Date.now()}`,
-      description: `Переименован слой`,
-      state: layers.map(layer => ({
-        ...layer,
-        elements: [...layer.elements]
-      })),
-    }]);
-
-    setLayers(prev => prev.map(layer => {
-      if (layer.id === layerId) {
-        return {
-          ...layer,
-          name: newLayerName,
-        };
-      }
-      return layer;
-    }));
-    setRenamingLayerId(null);
-  };
-
-  const handleHistoryItemClick = (index: number) => {
-    const selectedState = history[index].state;
-    setLayers(selectedState);
-    
-    setHistory(prev => prev.map((item, i) => ({
-      ...item,
-      isAfterSelected: i > index,
-    })));
-  };
-
-  const toggleHistoryItemVisibility = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const item = history[index];
-    const newVisibility = !item.state.some(layer => layer.visible);
-    
-    const updatedState = item.state.map(layer => ({
-      ...layer,
-      visible: newVisibility
-    }));
-    
-    setLayers(updatedState);
-    
-    setHistory(prev => prev.map((histItem, i) => 
-      i === index ? { ...histItem, state: updatedState } : histItem
-    ));
-  };
-
-  const getAllVisibleElements = () => {
-    return layers.flatMap(layer => 
-      layer.visible 
-        ? layer.elements.map(el => ({ ...el, opacity: layer.opacity / 100 }))
-        : []
+  const getAllVisibleElements = useCallback((): DrawingElement[] => {
+    const visibleElements: DrawingElement[] = (layersData || []).flatMap(
+      (layer) =>
+        layer.isVisible
+          ? ((layer.data as GraphicObject[]) || []).map((obj) => ({
+              ...mapGraphicObjectToDrawingElement(obj),
+              opacity: layer.opacity / 100,
+            }))
+          : []
     );
-  };
+    if (draft && activeLayer?.isVisible) {
+      visibleElements.push({
+        ...mapGraphicObjectToDrawingElement(draft),
+        opacity: activeLayer.opacity / 100,
+      });
+    }
+    return visibleElements;
+  }, [layersData, draft, activeLayer]);
+
+  if (layersLoading || !projectId) {
+    return <Pane>Loading...</Pane>;
+  }
 
   return (
-    <Pane display="flex" flexDirection="column" height="100vh" position="relative">
+    <Pane
+      display="flex"
+      flexDirection="column"
+      height="100vh"
+      position="relative"
+    >
       <TopMenu />
       <DndProvider backend={HTML5Backend}>
-        <ToolsPanel 
+        <ToolsPanel
           onToolSelect={handleToolSelect}
           onColorSelect={handleColorSelect}
           activeTool={activeTool}
+          activeShape={
+            activeTool === "rectangle" || activeTool === "circle"
+              ? activeTool
+              : undefined
+          }
           activeColor={activeColor}
         />
         <Pane display="flex" flex={1}>
@@ -292,117 +408,24 @@ export const Editor = () => {
             display="flex"
             flexDirection="column"
           >
-            <Pane padding={16} borderBottom="1px solid #E4E7EB">
-              <Button 
-                width="100%" 
-                appearance="primary" 
-                intent="success"
-                onClick={handleCreateLayer}
-                iconBefore="plus"
-              >
-                Новый слой
-              </Button>
-            </Pane>
-
-            <Pane flex={1} overflowY="auto" padding={16}>
-              <Text size={500} marginBottom={8}>Слои</Text>
-              {layers.map(layer => (
-                <Pane 
-                  key={layer.id}
-                  display="flex"
-                  alignItems="center"
-                  padding={8}
-                  background={layer.id === activeLayerId ? '#EDF0F2' : 'transparent'}
-                  borderRadius={4}
-                  marginBottom={4}
-                  onClick={() => handleLayerSelect(layer.id)}
-                  cursor="pointer"
-                >
-                  <IconButton 
-                    icon={layer.visible ? 'eye-open' : 'eye-off'} 
-                    appearance="minimal"
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      handleToggleLayerVisibility(layer.id);
-                    }}
-                  />
-                  {renamingLayerId === layer.id ? (
-                    <Pane display="flex" flex={1} marginX={8}>
-                      <TextInput
-                        value={newLayerName}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewLayerName(e.target.value)}
-                        onBlur={() => handleRenameLayer(layer.id)}
-                        onKeyDown={(e: React.KeyboardEvent) => {
-                          if (e.key === 'Enter') {
-                            handleRenameLayer(layer.id);
-                          }
-                        }}
-                        width="100%"
-                      />
-                    </Pane>
-                  ) : (
-                    <Text flex={1} marginX={8} fontWeight={layer.id === activeLayerId ? 'bold' : 'normal'}>
-                      {layer.name}
-                    </Text>
-                  )}
-                  <Menu
-                    position={Position.BOTTOM_RIGHT}
-                    onDismiss={() => setRenamingLayerId(null)}
-                  >
-                    <Menu.Item
-                      icon="edit"
-                      onSelect={() => startRenamingLayer(layer.id, layer.name)}
-                    >
-                      Переименовать
-                    </Menu.Item>
-                    <Menu.Item
-                      icon="trash"
-                      intent="danger"
-                      onSelect={() => handleDeleteLayer(layer.id)}
-                    >
-                      Удалить
-                    </Menu.Item>
-                  </Menu>
-                </Pane>
-              ))}
-            </Pane>
-
-            <Pane padding={16} borderTop="1px solid #E4E7EB">
-              <Text display="block" marginBottom={8}>Прозрачность</Text>
-              <Slider
-                min={0}
-                max={100}
-                step={1}
-                value={activeLayer.opacity}
-                onChange={handleOpacityChange}
-              />
-            </Pane>
-
-            <Pane flex={1} overflowY="auto" padding={16} borderTop="1px solid #E4E7EB">
-              <Text size={500} marginBottom={8}>История</Text>
-              {history.map((item, index) => (
-                <Pane
-                  key={item.id}
-                  display="flex"
-                  alignItems="center"
-                  padding={8}
-                  borderRadius={4}
-                  marginBottom={4}
-                  opacity={item.isAfterSelected ? 0.5 : 1}
-                  background="#F7F8FA"
-                  onClick={() => handleHistoryItemClick(index)}
-                  cursor="pointer"
-                >
-                  <IconButton 
-                    icon={item.state.some(l => l.visible) ? 'eye-open' : 'eye-off'} 
-                    appearance="minimal"
-                    onClick={(e) => toggleHistoryItemVisibility(index, e)}
-                    marginRight={8}
-                  />
-                  <Text flex={1}>{item.description}</Text>
-                </Pane>
-              ))}
-            </Pane>
+            <LayerCreator onCreateLayer={handleCreateLayer} />
+            <LayersList
+              layers={layersData || []}
+              activeLayerId={activeLayerId}
+              onLayerSelect={handleLayerSelect}
+              onToggleVisibility={handleToggleLayerVisibility}
+              onDeleteLayer={handleDeleteLayer}
+              onRenameLayer={handleRenameLayer}
+            />
+            <OpacityControl
+              opacity={activeLayer?.opacity ?? 100}
+              onOpacityChange={handleOpacityChange}
+            />
+            <HistoryList
+              history={historyData || []}
+              selectedIndex={selectedHistoryIndex}
+              onHistoryClick={handleHistoryItemClick}
+            />
           </Pane>
         </Pane>
       </DndProvider>

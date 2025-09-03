@@ -1,6 +1,6 @@
 export type DrawingElement = {
   id: string;
-  type: 'brush' | 'rectangle' | 'circle' | 'triangle' | 'eraser';
+  type: "brush" | "rectangle" | "circle" | "triangle" | "eraser";
   points?: number[];
   x?: number;
   y?: number;

@@ -12,6 +12,11 @@ export const routes: RouteObject[] = [
     element: <Editor />,
     errorElement: <div>Проект не найден</div>,
   },
+  {
+    path: "/temp-page",
+    element: <Editor />,
+    errorElement: <div>Проект не найден</div>,
+  },
 ];
 
 export const router = createBrowserRouter(routes);

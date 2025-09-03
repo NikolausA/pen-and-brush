@@ -1,9 +1,9 @@
 //@ts-nocheck
-import { Pane } from 'evergreen-ui';
-import { Stage, Layer, Line, Rect, Circle, RegularPolygon } from 'react-konva';
+import { Pane } from "evergreen-ui";
+import { Stage, Layer, Line, Rect, Circle, RegularPolygon } from "react-konva";
 
-import styles from './canvas.module.scss';
-import type { DrawingElement } from '@/pages/editor';
+import styles from "./canvas.module.scss";
+import type { DrawingElement } from "@/pages/editor";
 
 interface CanvasProps {
   width: number;
@@ -23,7 +23,10 @@ export const Canvas = ({
   onMouseMove,
   onMouseUp,
 }: CanvasProps) => {
-  const handleMouseEvent = (e: any, handler: (pos: { x: number; y: number }) => void) => {
+  const handleMouseEvent = (
+    e: any,
+    handler: (pos: { x: number; y: number }) => void
+  ) => {
     const stage = e.target.getStage();
     const pointerPos = stage.getPointerPosition();
     handler(pointerPos);
@@ -31,7 +34,7 @@ export const Canvas = ({
 
   const renderElement = (element: DrawingElement) => {
     switch (element.type) {
-      case 'brush':
+      case "brush":
         return (
           <Line
             key={element.id}
@@ -45,13 +48,13 @@ export const Canvas = ({
             listening={false}
           />
         );
-      case 'eraser':
+      case "eraser":
         return (
           <Line
             key={element.id}
             points={element.points}
-            stroke="#ffffff" 
-            strokeWidth={20} 
+            stroke="#ffffff"
+            strokeWidth={20}
             lineCap="round"
             lineJoin="round"
             tension={0.5}
@@ -60,7 +63,7 @@ export const Canvas = ({
             globalCompositeOperation="destination-out"
           />
         );
-      case 'rectangle':
+      case "rectangle":
         return (
           <Rect
             key={element.id}
@@ -74,7 +77,7 @@ export const Canvas = ({
             listening={false}
           />
         );
-      case 'circle':
+      case "circle":
         return (
           <Circle
             key={element.id}
@@ -87,7 +90,7 @@ export const Canvas = ({
             listening={false}
           />
         );
-      case 'triangle':
+      case "triangle":
         return (
           <RegularPolygon
             key={element.id}
@@ -116,9 +119,7 @@ export const Canvas = ({
         onMouseUp={onMouseUp}
         className={styles.stage}
       >
-        <Layer>
-          {elements.map(renderElement)}
-        </Layer>
+        <Layer>{elements.map(renderElement)}</Layer>
       </Stage>
     </Pane>
   );

@@ -1,24 +1,23 @@
 import { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { Pane, majorScale } from "evergreen-ui";
 import { NewProjectModal } from "@/components/simple";
 import { ProjectList } from "@/components/smart";
 import { HeaderHome } from "@/components/ui";
 import {
-  createProject,
-  setCurrentProject,
-  deleteProject,
-} from "@/core/store/slices/projects-slice";
-// import type { RootState, AppDispatch } from "@/core/store";
-import type { AppDispatch } from "@/core/store";
-import { useGetProjectsQuery } from "@/core/store/api";
+  useGetProjectsQuery,
+  useCreateProjectMutation,
+  useDeleteProjectMutation,
+} from "@/core/store/api";
 
 export const Home = () => {
-  const dispatch = useDispatch<AppDispatch>();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
 
   const { data: projects, isLoading, isError, error } = useGetProjectsQuery();
+  const [createProject] = useCreateProjectMutation();
+  const [deleteProject] = useDeleteProjectMutation();
 
   if (isError) {
     console.log(error);
@@ -26,17 +25,29 @@ export const Home = () => {
 
   const handleClick = () => setIsModalOpen(true);
 
-  const handleCreateProject = (name: string, width: number, height: number) => {
-    dispatch(createProject({ name, width, height })).then((action) => {
-      if (createProject.fulfilled.match(action)) {
-        dispatch(setCurrentProject(action.payload));
-        setIsModalOpen(false);
-      }
-    });
+  const handleCreateProject = async (
+    name: string,
+    width: number,
+    height: number
+  ) => {
+    try {
+      const newProject = await createProject({
+        name,
+        width,
+        height,
+      }).unwrap();
+
+      navigate(`/projects/${newProject.id}`);
+      console.log("Проект создан:", newProject);
+
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Ошибка при создании проекта:", err);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    dispatch(deleteProject(id));
+  const handleDelete = async (id: string) => {
+    await deleteProject(id).unwrap();
   };
 
   const filteredProjects =
@@ -63,7 +74,6 @@ export const Home = () => {
       />
 
       {isLoading && <Pane>Loading...</Pane>}
-      {/* {isError && <Pane color="danger">{error.error}</Pane>} */}
 
       {filteredProjects.length > 0 ? (
         <ProjectList projects={filteredProjects} onDelete={handleDelete} />
