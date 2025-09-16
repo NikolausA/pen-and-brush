@@ -100,3 +100,20 @@ docker-compose up -d --build
   ```bash
   docker-compose logs -f db
   ```
+
+
+### Update
+
+пересборка бэка
+
+docker-compose build backend 
+
+пересборка фронта
+
+docker-compose build frontend
+
+после build для конкретного сервиса прописать перезапуск
+
+docker-compose up -d backend
+
+на docker desktop убедиться что все перезапущено;

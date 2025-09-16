@@ -7,17 +7,21 @@ services:
       - NODE_ENV=production
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_USER=u
-      - DB_PASSWORD=q
+      - DB_USER=user
+      - DB_PASSWORD=password
       - DB_NAME=graphic_editor
     ports:
       - "1221:1221"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1221/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
-
 
   frontend:
     build:
@@ -26,7 +30,8 @@ services:
     ports:
       - "1331:1331"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -42,11 +47,10 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U u -d graphic_editor || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U user -d graphic_editor || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
-
 
 networks:
   app-network:
