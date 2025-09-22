@@ -1,5 +1,5 @@
 import { type RouteObject, createBrowserRouter } from "react-router-dom";
-import { Home, Editor } from "@/pages";
+import { Home, EditorPage, TempEditorPage, } from "@/pages";
 
 export const routes: RouteObject[] = [
   {
@@ -8,8 +8,13 @@ export const routes: RouteObject[] = [
     errorElement: <div>Ошибка загрузки главной страницы</div>,
   },
   {
-    path: "/projects/:id",
-    element: <Editor />,
+    path: "/projects/:projectId",
+    element: <EditorPage />,
+    errorElement: <div>Проект не найден</div>,
+  },
+  {
+    path: "/temp-page",
+    element: <TempEditorPage />,
     errorElement: <div>Проект не найден</div>,
   },
 ];
