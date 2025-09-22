@@ -1,8 +1,17 @@
 import { Pane, Text } from "evergreen-ui";
 import type { History } from "@/core/types/interfaces/entities";
 
+interface HistoryItem {
+  id: string;
+  action: string;
+  // Остальные поля опциональны
+  projectId?: string;
+  data?: any;
+  createdAt?: string;
+}
+
 interface HistoryListProps {
-  history: History[];
+  history: HistoryItem[]; // Более гибкий тип
   selectedIndex: number | null;
   onHistoryClick: (index: number) => void;
 }
