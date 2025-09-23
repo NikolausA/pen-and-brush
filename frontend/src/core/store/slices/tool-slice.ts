@@ -1,6 +1,5 @@
-// src/store/toolSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { Tool, ToolType } from "@/core/types/domain/entities";
+import type { Tool, ToolType } from "@/core/types/interfaces/entities";
 
 const initialState: Tool = {
   activeTool: "brush",

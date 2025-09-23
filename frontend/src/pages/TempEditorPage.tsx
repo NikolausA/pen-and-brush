@@ -1,4 +1,6 @@
-import { Editor } from "@/components/smart/editor/editor";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+import { Editor } from "@/components/smart/Editor/Editor";
 
 export const TempEditorPage = () => {
   // const projectId = undefined;

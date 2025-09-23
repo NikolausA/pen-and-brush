@@ -10,4 +10,4 @@ export type {
   Tool,
   ToolType,
   Layer,
-} from "../domain/entities";
+} from "../interfaces/entities";
