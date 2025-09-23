@@ -13,7 +13,7 @@ import {
   TrashIcon,
   EditIcon,
 } from "evergreen-ui";
-import type { Layer } from "@/core/types/domain/entities";
+import type { Layer } from "@/core/types/interfaces/entities";
 
 interface LayersListProps {
   layers: Layer[];

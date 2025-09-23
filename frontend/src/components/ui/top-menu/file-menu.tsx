@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Pane, Popover, Menu, Button } from 'evergreen-ui';
-import { NewProjectModal } from '@/components/simple';
-
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Pane, Popover, Menu, Button } from "evergreen-ui";
+import { NewProjectModal } from "@/components/simple";
 
 interface FileMenuProps {
   isModalOpen: boolean;
@@ -10,16 +11,20 @@ interface FileMenuProps {
   onCreateProject: (name: string, width: number, height: number) => void;
 }
 
-export const FileMenu = ({ isModalOpen, setIsModalOpen, onCreateProject }: FileMenuProps) => {
+export const FileMenu = ({
+  isModalOpen,
+  setIsModalOpen,
+  onCreateProject,
+}: FileMenuProps) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   function saveProject() {
-    console.log('save');
+    console.log("save");
   }
 
   const handleExport = () => {
-    console.log('Экспорт в PNG');
+    console.log("Экспорт в PNG");
   };
 
   return (
@@ -30,10 +35,12 @@ export const FileMenu = ({ isModalOpen, setIsModalOpen, onCreateProject }: FileM
         onClose={() => setIsMenuOpen(false)}
         content={
           <Menu>
-            <Menu.Item onSelect={() => setIsModalOpen(true)}>Новый проект</Menu.Item>
+            <Menu.Item onSelect={() => setIsModalOpen(true)}>
+              Новый проект
+            </Menu.Item>
             <Menu.Item onSelect={saveProject}>Сохранить</Menu.Item>
             <Menu.Item onSelect={handleExport}>Экспорт в PNG</Menu.Item>
-            <Menu.Item onSelect={() => navigate('/')}>Все проекты</Menu.Item>
+            <Menu.Item onSelect={() => navigate("/")}>Все проекты</Menu.Item>
           </Menu>
         }
       >

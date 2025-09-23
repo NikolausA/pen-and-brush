@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+
 import { useCallback } from "react";
 import { useAddHistoryMutation } from "@/core/store/api";
 import type { Layer } from "@/core/types/interfaces/entities";

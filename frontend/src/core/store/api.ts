@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import type { Project, Layer } from "@/core/types/interfaces/entities";
+import type { Project, Layer, History } from "@/core/types/interfaces/entities";
 import { setObjects } from "@/core/store/slices/graphicObjectSlice";
 import type { GraphicObject } from "@/core/types/interfaces/igraphic-objects";
 
