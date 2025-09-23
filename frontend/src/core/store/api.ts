@@ -5,7 +5,7 @@ import type { GraphicObject } from "@/core/types/interfaces/igraphic-objects";
 
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:1221/api" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:1221" }),
   tagTypes: ["Project", "Layer", "History"],
   endpoints: (builder) => ({
     // PROJECTS =================
