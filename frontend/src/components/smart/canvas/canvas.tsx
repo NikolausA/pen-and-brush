@@ -1,14 +1,15 @@
-//@ts-nocheck
+// @ts-nocheck
+import { useRef, useEffect } from "react";
 import { Pane } from "evergreen-ui";
-import { Stage, Layer, Line, Rect, Circle, RegularPolygon } from "react-konva";
+import { Stage, Layer, Line, Rect, Circle } from "react-konva";
+import type { GraphicObject } from "@/core/types/interfaces/igraphic-objects";
 
 import styles from "./canvas.module.scss";
-import type { DrawingElement } from "@/components/smart/editor/editor";
 
 interface CanvasProps {
   width: number;
   height: number;
-  elements: DrawingElement[];
+  elements: GraphicObject[];
   onMouseDown: (pos: { x: number; y: number }) => void;
   onMouseMove: (pos: { x: number; y: number }) => void;
   onMouseUp: () => void;
@@ -22,89 +23,120 @@ export const Canvas = ({
   onMouseDown,
   onMouseMove,
   onMouseUp,
+  activeTool,
 }: CanvasProps) => {
+  const stageRef = useRef<any>(null);
+
+  // Устанавливаем курсор в зависимости от активного инструмента
+  useEffect(() => {
+    if (stageRef.current) {
+      const container = stageRef.current.container();
+      let cursor = 'default';
+      
+      switch (activeTool) {
+        case 'brush':
+          cursor = 'crosshair';
+          break;
+        case 'eraser':
+          cursor = 'grab';
+          break;
+        case 'line':
+        case 'rectangle':
+        case 'circle':
+          cursor = 'crosshair';
+          break;
+        default:
+          cursor = 'default';
+      }
+      
+      container.style.cursor = cursor;
+    }
+  }, [activeTool]);
+
   const handleMouseEvent = (
     e: any,
     handler: (pos: { x: number; y: number }) => void
   ) => {
+    e.evt.preventDefault();
     const stage = e.target.getStage();
     const pointerPos = stage.getPointerPosition();
-    handler(pointerPos);
+    
+    if (pointerPos) {
+      console.log('Canvas event:', pointerPos);
+      handler(pointerPos);
+    }
   };
 
-  const renderElement = (element: DrawingElement) => {
+  const renderElement = (element: GraphicObject, index: number) => {
+    const key = `${element.id}-${index}`;
+    
+    console.log('Rendering element:', element);
+
     switch (element.type) {
-      case "brush":
+      case "freePath":
+        if (!element.points || element.points.length < 2) return null;
         return (
           <Line
-            key={element.id}
+            key={key}
             points={element.points}
-            stroke={element.color}
-            strokeWidth={5}
+            stroke={element.strokeColor || "#000000"}
+            strokeWidth={element.strokeWidth || 5}
             lineCap="round"
             lineJoin="round"
             tension={0.5}
             perfectDrawEnabled={false}
             listening={false}
+            globalCompositeOperation={
+              element.strokeColor === "#ffffff" ? "destination-out" : "source-over"
+            }
           />
         );
-      case "eraser":
+        
+      case "line":
+        if (!element.points || element.points.length < 4) return null;
         return (
           <Line
-            key={element.id}
+            key={key}
             points={element.points}
-            stroke="#ffffff"
-            strokeWidth={20}
+            stroke={element.strokeColor || "#000000"}
+            strokeWidth={element.strokeWidth || 2}
             lineCap="round"
-            lineJoin="round"
-            tension={0.5}
             perfectDrawEnabled={false}
             listening={false}
-            globalCompositeOperation="destination-out"
           />
         );
-      case "rectangle":
+        
+      case "rect":
         return (
           <Rect
-            key={element.id}
-            x={element.x}
-            y={element.y}
-            width={element.width}
-            height={element.height}
-            fill={element.color}
-            stroke="black"
-            strokeWidth={1}
+            key={key}
+            x={element.x || 0}
+            y={element.y || 0}
+            width={Math.abs(element.width || 0)}
+            height={Math.abs(element.height || 0)}
+            fill={element.fillColor || "transparent"}
+            stroke={element.strokeColor || "#000000"}
+            strokeWidth={element.strokeWidth || 2}
             listening={false}
           />
         );
+        
       case "circle":
         return (
           <Circle
-            key={element.id}
-            x={(element.x || 0) + (element.width || 0) / 2}
-            y={(element.y || 0) + (element.height || 0) / 2}
-            radius={Math.max(element.width || 0, element.height || 0) / 2}
-            fill={element.color}
-            stroke="black"
-            strokeWidth={1}
+            key={key}
+            x={element.x || 0}
+            y={element.y || 0}
+            radius={Math.abs(element.radius || 0)}
+            fill={element.fillColor || "transparent"}
+            stroke={element.strokeColor || "#000000"}
+            strokeWidth={element.strokeWidth || 2}
             listening={false}
           />
         );
-      case "triangle":
-        return (
-          <RegularPolygon
-            key={element.id}
-            x={(element.x || 0) + (element.width || 0) / 2}
-            y={(element.y || 0) + (element.height || 0) / 2}
-            sides={3}
-            radius={Math.max(element.width || 0, element.height || 0) / 2}
-            fill={element.color}
-            stroke="black"
-            strokeWidth={1}
-            listening={false}
-          />
-        );
+        
       default:
+        console.warn('Unknown element type:', element.type);
         return null;
     }
   };
@@ -112,14 +144,25 @@ export const Canvas = ({
   return (
     <Pane className={styles.container}>
       <Stage
+        ref={stageRef}
         width={width}
         height={height}
-        onMouseDown={(e) => handleMouseEvent(e, onMouseDown)}
-        onMouseMove={(e) => handleMouseEvent(e, onMouseMove)}
-        onMouseUp={onMouseUp}
+        onMouseDown={(e) => {
+          console.log('Stage mouse down');
+          handleMouseEvent(e, onMouseDown);
+        }}
+        onMouseMove={(e) => {
+          handleMouseEvent(e, onMouseMove);
+        }}
+        onMouseUp={(e) => {
+          console.log('Stage mouse up');
+          onMouseUp();
+        }}
         className={styles.stage}
       >
-        <Layer>{elements.map(renderElement)}</Layer>
+        <Layer>
+          {elements.map((element, index) => renderElement(element, index))}
+        </Layer>
       </Stage>
     </Pane>
   );

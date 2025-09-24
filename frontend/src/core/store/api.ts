@@ -5,7 +5,9 @@ import type { GraphicObject } from "@/core/types/interfaces/igraphic-objects";
 
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:1221" }),
+  baseQuery: fetchBaseQuery({ 
+    baseUrl: "http://localhost:1221/api" // Исправлен порт с 1441 на 1221
+  }),
   tagTypes: ["Project", "Layer", "History"],
   endpoints: (builder) => ({
     // PROJECTS =================
@@ -13,10 +15,12 @@ export const api = createApi({
       query: () => "/projects",
       providesTags: ["Project"],
     }),
+    
     getProjectById: builder.query<Project, string>({
       query: (id) => `/projects/${id}`,
       providesTags: (result, error, id) => [{ type: "Project", id }],
     }),
+    
     createProject: builder.mutation<Project, Partial<Project>>({
       query: (body) => ({
         url: "/projects",
@@ -25,7 +29,17 @@ export const api = createApi({
       }),
       invalidatesTags: ["Project"],
     }),
-    deleteProject: builder.mutation<{ success: boolean }, string>({
+    
+    updateProject: builder.mutation<Project, { id: string; data: Partial<Project> }>({
+      query: ({ id, data }) => ({
+        url: `/projects/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: "Project", id }],
+    }),
+    
+    deleteProject: builder.mutation<{ message: string }, string>({
       query: (id) => ({
         url: `/projects/${id}`,
         method: "DELETE",
@@ -33,9 +47,12 @@ export const api = createApi({
       invalidatesTags: ["Project"],
     }),
 
-    // LAYERS =================
+    // LAYERS ================= (НОВАЯ СТРУКТУРА)
     getLayers: builder.query<Layer[], string>({
-      query: (projectId) => `/projects/${projectId}/layers`,
+      query: (projectId) => ({
+        url: `/layers`,
+        params: { projectId } // Используем query параметры
+      }),
       providesTags: ["Layer"],
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
@@ -49,50 +66,87 @@ export const api = createApi({
           }
           dispatch(setObjects(objects));
         } catch {
-          // ignore
+          // ignore error
         }
       },
     }),
+    
     createLayer: builder.mutation<
       Layer,
       { projectId: string; data: Partial<Layer> }
     >({
       query: ({ projectId, data }) => ({
-        url: `/projects/${projectId}/layers`,
+        url: `/layers`,
         method: "POST",
-        body: data,
+        body: {
+          ...data,
+          projectId // projectId теперь в body
+        },
       }),
       invalidatesTags: ["Layer"],
     }),
-    updateLayer: builder.mutation<Layer, { id: string; data: Partial<Layer> }>({
-      query: ({ id, data }) => ({
-        url: `/layers/${id}`,
+    
+    updateLayer: builder.mutation<
+      Layer, 
+      { layerId: string; projectId: string; data: Partial<Layer> }
+    >({
+      query: ({ layerId, projectId, data }) => ({
+        url: `/layers/${layerId}`,
         method: "PATCH",
-        body: data,
+        body: {
+          ...data,
+          projectId // projectId обязательно в body
+        },
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Layer", id }],
+      invalidatesTags: (result, error, { layerId }) => [{ type: "Layer", id: layerId }],
     }),
-    deleteLayer: builder.mutation<{ success: boolean }, string>({
-      query: (id) => ({
-        url: `/layers/${id}`,
+    
+    deleteLayer: builder.mutation<
+      { message: string }, 
+      { layerId: string; projectId: string }
+    >({
+      query: ({ layerId, projectId }) => ({
+        url: `/layers/${layerId}`,
         method: "DELETE",
+        body: { projectId } // projectId в body для DELETE
       }),
       invalidatesTags: ["Layer"],
     }),
 
-    // HISTORY =================
+    // HISTORY ================= (теперь полностью функциональный)
     getHistory: builder.query<History[], string>({
-      query: (projectId) => `/projects/${projectId}/history`,
+      query: (projectId) => ({
+        url: `/history`,
+        params: { projectId }
+      }),
       providesTags: ["History"],
     }),
+    
     addHistory: builder.mutation<
       History,
       { projectId: string; data: Partial<History> }
     >({
       query: ({ projectId, data }) => ({
-        url: `/projects/${projectId}/history`,
+        url: `/history`,
         method: "POST",
-        body: data,
+        body: {
+          projectId,
+          action: data.action,
+          data: data.data || {},
+          layerId: data.layerId || null
+        },
+      }),
+      invalidatesTags: ["History"],
+    }),
+    
+    deleteHistory: builder.mutation<
+      { message: string }, 
+      { historyId: string; projectId: string }
+    >({
+      query: ({ historyId, projectId }) => ({
+        url: `/history/${historyId}`,
+        method: "DELETE",
+        body: { projectId }
       }),
       invalidatesTags: ["History"],
     }),
@@ -103,6 +157,7 @@ export const {
   useGetProjectsQuery,
   useGetProjectByIdQuery,
   useCreateProjectMutation,
+  useUpdateProjectMutation,
   useDeleteProjectMutation,
   useGetLayersQuery,
   useCreateLayerMutation,
@@ -110,4 +165,5 @@ export const {
   useDeleteLayerMutation,
   useGetHistoryQuery,
   useAddHistoryMutation,
+  useDeleteHistoryMutation, // Добавлен новый хук
 } = api;

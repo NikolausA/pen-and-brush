@@ -27,6 +27,7 @@ export const TopMenu = () => {
       paddingY={8}
       display="flex"
       gap={16}
+      zIndex={9999}
     >
       <FileMenu
         isModalOpen={isModalOpen}

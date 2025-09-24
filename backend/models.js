@@ -1,5 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = require('../config/db-config.js');
+const sequelize = require('./config/db-config.js');
 
 const Project = sequelize.define('Project', {
   id: {
@@ -51,7 +51,8 @@ const Layer = sequelize.define('Layer', {
   },
   order: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    field: 'order'
   },
   isVisible: {
     type: DataTypes.BOOLEAN,
@@ -64,7 +65,7 @@ const Layer = sequelize.define('Layer', {
     field: 'opacity' 
   },
   data: {
-    type: DataTypes.JSON,
+    type: DataTypes.JSONB,
     defaultValue: {}
   },
   createdAt: {
@@ -103,7 +104,7 @@ const History = sequelize.define('History', {
     allowNull: false
   },
   data: {
-    type: DataTypes.JSON,
+    type: DataTypes.JSONB,
     defaultValue: {}
   },
   createdAt: {
@@ -121,29 +122,35 @@ const History = sequelize.define('History', {
   timestamps: true
 });
 
+// Устанавливаем связи
 Project.hasMany(Layer, { 
-  foreignKey: 'project_id', 
-  as: 'layers', 
+  foreignKey: 'projectId',
+  as: 'layers',
   sourceKey: 'id' 
 });
+
 Layer.belongsTo(Project, { 
-  foreignKey: 'project_id', 
-  targetKey: 'id' 
-});
-Project.hasMany(History, { 
-  foreignKey: 'project_id', 
-  as: 'history', 
-  sourceKey: 'id' 
-});
-History.belongsTo(Project, { 
-  foreignKey: 'project_id', 
-  targetKey: 'id' 
-});
-History.belongsTo(Layer, { 
-  foreignKey: 'layer_id', 
+  foreignKey: 'projectId',
   targetKey: 'id' 
 });
 
+Project.hasMany(History, { 
+  foreignKey: 'projectId',
+  as: 'history',
+  sourceKey: 'id' 
+});
+
+History.belongsTo(Project, { 
+  foreignKey: 'projectId',
+  targetKey: 'id' 
+});
+
+History.belongsTo(Layer, { 
+  foreignKey: 'layerId',
+  targetKey: 'id' 
+});
+
+// Синхронизация только в режиме разработки
 if (process.env.NODE_ENV === 'development') {
   sequelize.sync({ force: false }).then(() => {
     console.log('Database synchronized');
@@ -152,4 +159,4 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-module.exports = { Project, Layer, History };
+module.exports = { Project, Layer, History, sequelize };

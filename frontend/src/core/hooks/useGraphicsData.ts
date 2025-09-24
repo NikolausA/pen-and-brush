@@ -7,9 +7,9 @@ import {
 import type { Layer } from "@/core/types/interfaces/entities";
 
 interface UseGraphicsDataProps {
-  layersData: Layer[];
+  layersData: Layer[] | undefined; // Уточняем, что layersData может быть undefined
   draft: GraphicObject | null;
-  activeLayer: Layer | undefined;
+  activeLayer: Layer | null; // Приводим в соответствие с CanvasContainer
 }
 
 export const useGraphicsData = ({
@@ -18,36 +18,69 @@ export const useGraphicsData = ({
   activeLayer,
 }: UseGraphicsDataProps) => {
   const enhanceGraphicObjectForCanvas = useCallback(
-    (obj: GraphicObject): GraphicObject => {
-      // Создаем копию объекта для избежания мутации
-      const enhanced = { ...obj };
+    (obj: GraphicObject): GraphicObject | null => {
+      try {
+        // Создаем копию объекта для избежания мутации
+        const enhanced: GraphicObject = { ...obj };
 
-      // Специальная обработка для кругов - добавляем данные для Canvas рендеринга
-      if (isCircleObject(enhanced)) {
-        const radius = enhanced.radius || 0;
-        const diameter = radius * 2;
+        // Проверка валидности объекта
+        if (!obj.id || !obj.type) {
+          console.warn("Invalid graphic object:", obj);
+          return null;
+        }
 
-        return {
-          ...enhanced,
-          centerX: enhanced.x,
-          centerY: enhanced.y,
-          // Для Canvas API нужны координаты левого верхнего угла и размеры
-          x: enhanced.x - radius,
-          y: enhanced.y - radius,
-          width: diameter,
-          height: diameter,
-        };
+        // Специальная обработка для кругов
+        if (isCircleObject(enhanced)) {
+          const radius = enhanced.radius || 0;
+          if (radius <= 0) {
+            console.warn("Invalid circle radius:", enhanced);
+            return null;
+          }
+          const diameter = radius * 2;
+
+          return {
+            ...enhanced,
+            centerX: enhanced.x ?? 0,
+            centerY: enhanced.y ?? 0,
+            x: (enhanced.x ?? 0) - radius,
+            y: (enhanced.y ?? 0) - radius,
+            width: diameter,
+            height: diameter,
+          };
+        }
+
+        // Для прямоугольников проверяем размеры
+        if (obj.type === "rect") {
+          if ((enhanced.width ?? 0) <= 0 || (enhanced.height ?? 0) <= 0) {
+            console.warn("Invalid rectangle dimensions:", enhanced);
+            return null;
+          }
+          return {
+            ...enhanced,
+            x: enhanced.x ?? 0,
+            y: enhanced.y ?? 0,
+            width: enhanced.width ?? 0,
+            height: enhanced.height ?? 0,
+          };
+        }
+
+        // Для линий и свободных путей проверяем точки
+        if (obj.type === "freePath" || obj.type === "line") {
+          if (!Array.isArray(enhanced.points) || enhanced.points.length < 2) {
+            console.warn("Invalid points for path/line:", enhanced);
+            return null;
+          }
+          return {
+            ...enhanced,
+            points: [...enhanced.points], // Глубокая копия точек
+          };
+        }
+
+        return enhanced;
+      } catch (error) {
+        console.error("Error enhancing graphic object:", error, obj);
+        return null;
       }
-
-      // Для прямоугольников добавляем данные о stroke если нужно
-      if (obj.type === "rect") {
-        return {
-          ...enhanced,
-          // Убеждаемся что есть все необходимые поля
-        };
-      }
-
-      return enhanced;
     },
     []
   );
@@ -55,6 +88,7 @@ export const useGraphicsData = ({
   const visibleElements = useMemo((): GraphicObject[] => {
     // Проверяем входные данные
     if (!Array.isArray(layersData)) {
+      console.warn("layersData is not an array:", layersData);
       return [];
     }
 
@@ -67,44 +101,42 @@ export const useGraphicsData = ({
       // Проверяем наличие данных слоя
       const layerData = layer.data as GraphicObject[];
       if (!Array.isArray(layerData)) {
+        console.warn(`Invalid layer data for layer ${layer.id}:`, layer.data);
         return [];
       }
 
       return layerData
-        .filter((obj) => obj && obj.id) // Фильтруем некорректные объекты
-        .map((obj) => {
-          const enhanced = enhanceGraphicObjectForCanvas(obj);
-
-          return {
-            ...enhanced,
-            opacity: Math.max(0, Math.min(1, layer.opacity / 100)), // Нормализуем opacity в 0-1
-            layerId: layer.id, // Добавляем информацию о слое
-            layerOrder: layer.order, // Для правильной сортировки
-            isDraft: false,
-          } as GraphicObject;
-        });
+        .map((obj) => enhanceGraphicObjectForCanvas(obj))
+        .filter((obj): obj is GraphicObject => obj !== null)
+        .map((obj) => ({
+          ...obj,
+          opacity: Math.max(0, Math.min(1, layer.opacity / 100)),
+          layerId: layer.id,
+          layerOrder: layer.order ?? 0,
+          isDraft: false,
+        }));
     });
 
     // Добавляем draft элемент если он существует и активный слой видим
     if (draft && activeLayer?.isVisible) {
-      try {
-        const enhanced = enhanceGraphicObjectForCanvas(draft);
+      const enhancedDraft = enhanceGraphicObjectForCanvas(draft);
+      if (enhancedDraft) {
         elements.push({
-          ...enhanced,
+          ...enhancedDraft,
           opacity: Math.max(0, Math.min(1, activeLayer.opacity / 100)),
           layerId: activeLayer.id,
-          layerOrder: activeLayer.order,
+          layerOrder: activeLayer.order ?? 0,
           isDraft: true,
-        } as GraphicObject);
-      } catch (error) {
-        console.warn("Error processing draft element:", error);
+        });
+      } else {
+        console.warn("Invalid draft element skipped:", draft);
       }
     }
 
-    // Сортируем элементы по порядку слоев (нижние слои рисуются первыми)
+    // Сортируем элементы по порядку слоев
     return elements.sort((a, b) => {
-      const orderA = a.layerOrder || 0;
-      const orderB = b.layerOrder || 0;
+      const orderA = a.layerOrder ?? 0;
+      const orderB = b.layerOrder ?? 0;
       return orderA - orderB;
     });
   }, [layersData, draft, activeLayer, enhanceGraphicObjectForCanvas]);
@@ -142,7 +174,7 @@ export const useGraphicsData = ({
   const statistics = useMemo(
     () => ({
       totalElements: visibleElements.length,
-      visibleLayers: layersData.filter((layer) => layer.isVisible).length,
+      visibleLayers: layersData?.filter((layer) => layer.isVisible).length ?? 0,
       elementsByType: {
         brush: visibleElements.filter(
           (el) => el.type === "freePath" && el.strokeColor !== "#ffffff"
