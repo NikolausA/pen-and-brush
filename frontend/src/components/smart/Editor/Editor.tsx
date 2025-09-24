@@ -31,7 +31,7 @@ export const Editor = ({ projectId }: EditorProps) => {
       <TopMenu />
       <DndProvider backend={HTML5Backend}>
         <EnhancedToolsPanel projectId={projectId} />
-        <Pane display="flex" flex={1}>
+        <Pane display="flex" flex={1} >
           <CanvasContainer
             projectId={projectId}
             activeLayerId={activeLayerId}

@@ -60,7 +60,12 @@ export const LayersList = ({
   }
 
   return (
-    <Pane flex={1} overflowY="auto" padding={16}>
+    <Pane
+      flex={1}
+      height={200} // Set fixed height to 200px
+      overflowY="auto" // Enable vertical scrolling
+      padding={16}
+    >
       <Text size={500} marginBottom={12} fontWeight={600}>
         Слои ({layers.length})
       </Text>
@@ -81,6 +86,7 @@ export const LayersList = ({
           className="layer-item"
           style={{
             opacity: layer.isVisible ? 1 : 0.6,
+            
           }}
         >
           {/* Видимость слоя */}

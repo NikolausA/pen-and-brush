@@ -69,7 +69,13 @@ export const HistoryList = ({
   }
 
   return (
-    <Pane flex={1} overflowY="auto" padding={16} borderTop="1px solid #E4E7EB">
+    <Pane 
+      flex={1} 
+      height={200} // Set fixed height to 200px
+      overflowY="auto" // Enable vertical scrolling
+      padding={16} 
+      borderTop="1px solid #E4E7EB"
+    >
       <Pane display="flex" alignItems="center" marginBottom={12}>
         <History size={16} color="#6B7280" />
         <Text size={500} marginLeft={8} fontWeight={600}>

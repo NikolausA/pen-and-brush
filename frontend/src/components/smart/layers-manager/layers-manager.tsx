@@ -193,11 +193,12 @@ export const LayersManager = ({
   return (
     <Pane 
       width={300} 
+      style={{height: "600px"}}
       display="flex" 
       flexDirection="column" 
       borderLeft="1px solid #E4E7EB"
       background="white"
-      height="100%"
+      height="300"
     >
       {/* Создание слоя */}
       <LayerCreator onCreateLayer={handleCreateLayer} />
