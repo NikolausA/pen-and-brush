@@ -14,7 +14,7 @@ import type { Layer } from "@/core/types/interfaces/entities";
 interface CanvasContainerProps {
   projectId: string;
   activeLayerId: string | null;
-  layersData: Layer[];
+  layersData: Layer[] | undefined; // Уточняем, что layersData может быть undefined
 }
 
 export const CanvasContainer = ({
@@ -34,7 +34,7 @@ export const CanvasContainer = ({
   const activeLayer = layersData?.find((layer) => layer.id === activeLayerId) || null;
 
   const { visibleElements } = useGraphicsData({
-    layersData,
+    layersData: layersData || [], // Предотвращаем передачу undefined
     draft,
     activeLayer,
   });
@@ -73,7 +73,7 @@ export const CanvasContainer = ({
 
       // Добавляем в историю
       addToHistory(`Добавлен элемент: ${activeTool}`, {
-        layers: layersData ?? [],
+        layers: layersData,
       });
 
       isDrawingRef.current = true;
@@ -167,35 +167,51 @@ export const CanvasContainer = ({
       setDraft((prev) => {
         if (!prev) return null;
         
-        if (prev.type === "freePath") {
-          return {
-            ...prev,
-            points: [...(prev.points || []), pos.x, pos.y],
-          };
-        } else if (prev.type === "line") {
-          return {
-            ...prev,
-            points: [prev.points[0], prev.points[1], pos.x, pos.y],
-          };
-        } else if (prev.type === "rect") {
-          const startX = prev.x || 0;
-          const startY = prev.y || 0;
-          return {
-            ...prev,
-            x: Math.min(startX, pos.x),
-            y: Math.min(startY, pos.y),
-            width: Math.abs(pos.x - startX),
-            height: Math.abs(pos.y - startY),
-          };
-        } else if (prev.type === "circle") {
-          const dx = pos.x - (prev.x || 0);
-          const dy = pos.y - (prev.y || 0);
-          return {
-            ...prev,
-            radius: Math.sqrt(dx * dx + dy * dy),
-          };
+        let updatedDraft: GraphicObject;
+
+        switch (prev.type) {
+          case "freePath":
+            updatedDraft = {
+              ...prev,
+              points: [...(prev.points || []), pos.x, pos.y],
+            };
+            break;
+
+          case "line":
+            updatedDraft = {
+              ...prev,
+              points: [prev.points[0], prev.points[1], pos.x, pos.y],
+            };
+            break;
+
+          case "rect":
+            const startX = prev.x || 0;
+            const startY = prev.y || 0;
+            updatedDraft = {
+              ...prev,
+              x: Math.min(startX, pos.x),
+              y: Math.min(startY, pos.y),
+              width: Math.abs(pos.x - startX),
+              height: Math.abs(pos.y - startY),
+            };
+            break;
+
+          case "circle":
+            const dx = pos.x - (prev.x || 0);
+            const dy = pos.y - (prev.y || 0);
+            updatedDraft = {
+              ...prev,
+              radius: Math.sqrt(dx * dx + dy * dy),
+            };
+            break;
+
+          default:
+            updatedDraft = prev;
+            break;
         }
-        return prev;
+
+        console.log('Updated draft:', updatedDraft);
+        return updatedDraft;
       });
     },
     [draft]
@@ -204,8 +220,27 @@ export const CanvasContainer = ({
   const handleMouseUp = useCallback(async () => {
     console.log('Mouse up, isDrawing:', isDrawingRef.current, 'draft:', draft);
     
+    if (!isDrawingRef.current || !draft || !activeLayer) {
+      isDrawingRef.current = false;
+      setDraft(null);
+      return;
+    }
+
     isDrawingRef.current = false;
-    if (draft && activeLayer) {
+
+    // Проверяем, что объект валиден перед сохранением
+    let isValid = true;
+    if (draft.type === "freePath" && (!draft.points || draft.points.length < 2)) {
+      isValid = false;
+    } else if (draft.type === "line" && (!draft.points || draft.points.length < 4)) {
+      isValid = false;
+    } else if (draft.type === "rect" && (draft.width === 0 || draft.height === 0)) {
+      isValid = false;
+    } else if (draft.type === "circle" && draft.radius === 0) {
+      isValid = false;
+    }
+
+    if (isValid) {
       console.log('Finalizing draft:', draft);
       
       // Добавляем объект в Redux store
@@ -213,7 +248,7 @@ export const CanvasContainer = ({
 
       try {
         // Получаем текущие данные слоя
-        const currentLayerData = Array.isArray(activeLayer.data) 
+        const currentLayerData = Array.isArray(activeLayer.data)
           ? activeLayer.data as GraphicObject[]
           : [];
         
@@ -222,20 +257,26 @@ export const CanvasContainer = ({
         
         console.log('Updating layer with data:', updatedData);
         
-        // Обновляем слой с правильной структурой для нового API
-        await updateLayer({ 
-          layerId: activeLayer.id, 
+        // Обновляем слой с оптимистическим обновлением
+        await updateLayer({
+          layerId: activeLayer.id,
           projectId: projectId,
-          data: { data: updatedData } 
+          data: { data: updatedData },
         }).unwrap();
         
         console.log('Layer updated successfully');
       } catch (error) {
         console.error('Error updating layer:', error);
       }
+    } else {
+      console.warn('Invalid draft, skipping save:', draft);
     }
+
     setDraft(null);
   }, [draft, activeLayer, projectId, dispatch, updateLayer]);
+
+  // Логируем visibleElements для отладки
+  console.log('Visible elements:', visibleElements);
 
   return (
     <Canvas
