@@ -1,7 +1,5 @@
-import { useState } from "react";
-// import {
-//   GripVertical
-// } from 'lucide-react';
+import { useState, useRef, useEffect } from "react";
+import { GripVertical } from 'lucide-react';
 
 import { getShapeLabel } from "@/core/utils/tools-panel-utils";
 import { colors, shapes } from "@/core/constants/tools-panel-data";
@@ -23,6 +21,26 @@ export const ToolsPanel = ({
   const [showShapePanel, setShowShapePanel] = useState(false);
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Фиксация позиции при изменении размера окна
+  useEffect(() => {
+    const handleResize = () => {
+      if (panelRef.current) {
+        const panelRect = panelRef.current.getBoundingClientRect();
+        const maxX = window.innerWidth - panelRect.width - 20;
+        const maxY = window.innerHeight - panelRect.height - 20;
+        
+        setPosition(prev => ({
+          x: Math.min(Math.max(prev.x, 20), maxX),
+          y: Math.min(Math.max(prev.y, 20), maxY)
+        }));
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleShapeSelect = (shape: string) => {
     onToolSelect(shape);
@@ -49,17 +67,31 @@ export const ToolsPanel = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (
-      e.target === e.currentTarget ||
-      (e.target as HTMLElement).closest(`.${styles.dragHandle}`)
-    ) {
+    // Проверяем что клик по области перетаскивания
+    const target = e.target as HTMLElement;
+    if (target.closest(`.${styles.dragHandle}`) || target === e.currentTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+      
       setIsDragging(true);
-      const startX = e.clientX - position.x,
-        startY = e.clientY - position.y;
+      const rect = panelRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const startX = e.clientX - rect.left;
+      const startY = e.clientY - rect.top;
+
       const handleMouseMove = (e: MouseEvent) => {
+        e.preventDefault();
+        const newX = e.clientX - startX;
+        const newY = e.clientY - startY;
+        
+        // Ограничиваем позицию границами экрана
+        const maxX = window.innerWidth - (rect.width || 56) - 20;
+        const maxY = window.innerHeight - (rect.height || 400) - 20;
+        
         setPosition({
-          x: e.clientX - startX,
-          y: e.clientY - startY,
+          x: Math.min(Math.max(newX, 20), maxX),
+          y: Math.min(Math.max(newY, 20), maxY)
         });
       };
 
@@ -76,16 +108,18 @@ export const ToolsPanel = ({
 
   return (
     <div
+      ref={panelRef}
       className={`${styles.panel} ${isDragging ? styles.dragging : ""}`}
       style={{
+        position: 'fixed', // Используем fixed вместо absolute
         left: `${position.x}px`,
         top: `${position.y}px`,
+        zIndex: 1, // Высокий z-index
       }}
       onMouseDown={handleMouseDown}
     >
       <div className={styles.dragHandle}>
-        <div>GriB</div>
-        {/* <GripVertical size={12} /> */}
+        <GripVertical size={12} />
       </div>
 
       <ToolsColumn
