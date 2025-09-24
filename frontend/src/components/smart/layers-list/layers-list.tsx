@@ -8,13 +8,7 @@ import {
   Menu,
   Position,
 } from "evergreen-ui";
-import { 
-  Eye, 
-  EyeOff, 
-  Layers, 
-  Trash, 
-  Edit 
-} from "lucide-react";
+import { FiEye, FiEyeOff, FiMoreVertical, FiTrash, FiEdit } from "react-icons/fi";
 import type { Layer } from "@/core/types/interfaces/entities";
 
 interface LayersListProps {
@@ -60,9 +54,7 @@ export const LayersList = ({
   if (layers.length === 0) {
     return (
       <Pane flex={1} padding={16} display="flex" alignItems="center" justifyContent="center">
-        <Text color="#8B949E">
-          Нет слоев. Создайте первый слой.
-        </Text>
+        <Text color="#8B949E">Нет слоев. Создайте первый слой.</Text>
       </Pane>
     );
   }
@@ -72,7 +64,7 @@ export const LayersList = ({
       <Text size={500} marginBottom={12} fontWeight={600}>
         Слои ({layers.length})
       </Text>
-      
+
       {sortedLayers.map((layer) => (
         <Pane
           key={layer.id}
@@ -93,7 +85,7 @@ export const LayersList = ({
         >
           {/* Видимость слоя */}
           <IconButton
-            icon={layer.isVisible ? Eye : EyeOff}
+            icon={layer.isVisible ? FiEye : FiEyeOff}
             appearance="minimal"
             size="small"
             onClick={(e: React.MouseEvent) => {
@@ -102,7 +94,7 @@ export const LayersList = ({
             }}
             title={layer.isVisible ? "Скрыть слой" : "Показать слой"}
           />
-          
+
           {/* Название слоя или поле ввода для переименования */}
           {renamingLayerId === layer.id ? (
             <Pane display="flex" flex={1} marginX={8}>
@@ -131,7 +123,7 @@ export const LayersList = ({
               >
                 {layer.name}
               </Text>
-              
+
               {/* Дополнительная информация о слое */}
               <Text size={300} color="#8B949E" marginTop={2}>
                 Прозрачность: {layer.opacity || 100}%
@@ -141,22 +133,19 @@ export const LayersList = ({
               </Text>
             </Pane>
           )}
-          
+
           {/* Меню действий */}
           {renamingLayerId !== layer.id && (
             <Popover
               position={Position.BOTTOM_RIGHT}
               content={
                 <Menu>
-                  <Menu.Item
-                    icon={Edit}
-                    onSelect={() => startRenaming(layer.id, layer.name)}
-                  >
+                  <Menu.Item icon={FiEdit} onSelect={() => startRenaming(layer.id, layer.name)}>
                     Переименовать
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item
-                    icon={Trash}
+                    icon={FiTrash}
                     intent="danger"
                     onSelect={() => onDeleteLayer(layer.id)}
                     disabled={layers.length <= 1}
@@ -166,9 +155,9 @@ export const LayersList = ({
                 </Menu>
               }
             >
-              <IconButton 
-                icon={Layers} 
-                appearance="minimal" 
+              <IconButton
+                icon={FiMoreVertical}
+                appearance="minimal"
                 size="small"
                 title="Действия со слоем"
               />
@@ -176,13 +165,13 @@ export const LayersList = ({
           )}
         </Pane>
       ))}
-      
+
       {/* Информация о активном слое */}
       {activeLayerId && (
-        <Pane 
-          marginTop={16} 
-          padding={12} 
-          background="#F9FAFB" 
+        <Pane
+          marginTop={16}
+          padding={12}
+          background="#F9FAFB"
           borderRadius={6}
           border="1px solid #E5E7EB"
         >
@@ -190,7 +179,7 @@ export const LayersList = ({
             Активный слой:
           </Text>
           <Text size={400} fontWeight={500}>
-            {sortedLayers.find(l => l.id === activeLayerId)?.name || 'Не найден'}
+            {sortedLayers.find((l) => l.id === activeLayerId)?.name || "Не найден"}
           </Text>
         </Pane>
       )}
