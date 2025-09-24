@@ -1,8 +1,17 @@
 import { useCallback, useMemo } from "react";
-import type { GraphicObject } from "@/core/types/interfaces/igraphic-objects";
+import type {
+  GraphicObject,
+  RectObject,
+  CircleObject,
+  LineObject,
+  FreePathObject,
+} from "@/core/types/interfaces/igraphic-objects";
 import {
   isCircleObject,
   hasShapeFill,
+  isRectObject,
+  isLineObject,
+  isFreePathObject,
 } from "@/core/types/interfaces/igraphic-objects";
 import type { Layer } from "@/core/types/interfaces/entities";
 
@@ -20,9 +29,6 @@ export const useGraphicsData = ({
   const enhanceGraphicObjectForCanvas = useCallback(
     (obj: GraphicObject): GraphicObject | null => {
       try {
-        // Создаем копию объекта для избежания мутации
-        const enhanced: GraphicObject = { ...obj };
-
         // Проверка валидности объекта
         if (!obj.id || !obj.type) {
           console.warn("Invalid graphic object:", obj);
@@ -30,53 +36,66 @@ export const useGraphicsData = ({
         }
 
         // Специальная обработка для кругов
-        if (isCircleObject(enhanced)) {
-          const radius = enhanced.radius || 0;
+        if (isCircleObject(obj)) {
+          const radius = obj.radius || 0;
           if (radius <= 0) {
-            console.warn("Invalid circle radius:", enhanced);
+            console.warn("Invalid circle radius:", obj);
             return null;
           }
           const diameter = radius * 2;
 
           return {
-            ...enhanced,
-            centerX: enhanced.x ?? 0,
-            centerY: enhanced.y ?? 0,
-            x: (enhanced.x ?? 0) - radius,
-            y: (enhanced.y ?? 0) - radius,
+            ...obj,
+            centerX: obj.x ?? 0,
+            centerY: obj.y ?? 0,
+            x: (obj.x ?? 0) - radius,
+            y: (obj.y ?? 0) - radius,
             width: diameter,
             height: diameter,
-          };
+          } as CircleObject;
         }
 
         // Для прямоугольников проверяем размеры
-        if (obj.type === "rect") {
-          if ((enhanced.width ?? 0) <= 0 || (enhanced.height ?? 0) <= 0) {
-            console.warn("Invalid rectangle dimensions:", enhanced);
+        if (isRectObject(obj)) {
+          if ((obj.width ?? 0) <= 0 || (obj.height ?? 0) <= 0) {
+            console.warn("Invalid rectangle dimensions:", obj);
             return null;
           }
           return {
-            ...enhanced,
-            x: enhanced.x ?? 0,
-            y: enhanced.y ?? 0,
-            width: enhanced.width ?? 0,
-            height: enhanced.height ?? 0,
-          };
+            ...obj,
+            x: obj.x ?? 0,
+            y: obj.y ?? 0,
+            width: obj.width ?? 0,
+            height: obj.height ?? 0,
+          } as RectObject;
         }
 
-        // Для линий и свободных путей проверяем точки
-        if (obj.type === "freePath" || obj.type === "line") {
-          if (!Array.isArray(enhanced.points) || enhanced.points.length < 2) {
-            console.warn("Invalid points for path/line:", enhanced);
+        // Для линий проверяем точки
+        if (isLineObject(obj)) {
+          if (!Array.isArray(obj.points) || obj.points.length < 4) {
+            console.warn("Invalid points for line:", obj);
             return null;
           }
           return {
-            ...enhanced,
-            points: [...enhanced.points], // Глубокая копия точек
-          };
+            ...obj,
+            points: [...obj.points], // Глубокая копия точек
+          } as LineObject;
         }
 
-        return enhanced;
+        // Для свободных путей проверяем точки
+        if (isFreePathObject(obj)) {
+          if (!Array.isArray(obj.points) || obj.points.length < 2) {
+            console.warn("Invalid points for freePath:", obj);
+            return null;
+          }
+          return {
+            ...obj,
+            points: [...obj.points], // Глубокая копия точек
+          } as FreePathObject;
+        }
+
+        // Fallback - возвращаем объект как есть
+        return obj;
       } catch (error) {
         console.error("Error enhancing graphic object:", error, obj);
         return null;
