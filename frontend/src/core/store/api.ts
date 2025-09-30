@@ -5,8 +5,8 @@ import type { GraphicObject } from "@/core/types/interfaces/igraphic-objects";
 
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({ 
-    baseUrl: "http://localhost:1221/api" // Исправлен порт с 1441 на 1221
+  baseQuery: fetchBaseQuery({
+    baseUrl: "http://localhost:1221/api",
   }),
   tagTypes: ["Project", "Layer", "History"],
   endpoints: (builder) => ({
@@ -15,12 +15,12 @@ export const api = createApi({
       query: () => "/projects",
       providesTags: ["Project"],
     }),
-    
+
     getProjectById: builder.query<Project, string>({
       query: (id) => `/projects/${id}`,
       providesTags: (result, error, id) => [{ type: "Project", id }],
     }),
-    
+
     createProject: builder.mutation<Project, Partial<Project>>({
       query: (body) => ({
         url: "/projects",
@@ -29,8 +29,11 @@ export const api = createApi({
       }),
       invalidatesTags: ["Project"],
     }),
-    
-    updateProject: builder.mutation<Project, { id: string; data: Partial<Project> }>({
+
+    updateProject: builder.mutation<
+      Project,
+      { id: string; data: Partial<Project> }
+    >({
       query: ({ id, data }) => ({
         url: `/projects/${id}`,
         method: "PATCH",
@@ -38,7 +41,7 @@ export const api = createApi({
       }),
       invalidatesTags: (result, error, { id }) => [{ type: "Project", id }],
     }),
-    
+
     deleteProject: builder.mutation<{ message: string }, string>({
       query: (id) => ({
         url: `/projects/${id}`,
@@ -47,17 +50,19 @@ export const api = createApi({
       invalidatesTags: ["Project"],
     }),
 
-    // LAYERS ================= (НОВАЯ СТРУКТУРА)
+    // LAYERS ================= (ИСПРАВЛЕНО)
     getLayers: builder.query<Layer[], string>({
       query: (projectId) => ({
         url: `/layers`,
-        params: { projectId } // Используем query параметры
+        params: { projectId },
       }),
-      providesTags: ["Layer"],
+      // ИСПРАВЛЕНО: Правильные теги с ID проекта
+      providesTags: (result, error, projectId) => [
+        { type: "Layer", id: `PROJECT_${projectId}` },
+      ],
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          // Собираем все graphicObjects из layer.data
           const objects: GraphicObject[] = [];
           for (const layer of data) {
             if (Array.isArray(layer.data)) {
@@ -70,7 +75,7 @@ export const api = createApi({
         }
       },
     }),
-    
+
     createLayer: builder.mutation<
       Layer,
       { projectId: string; data: Partial<Layer> }
@@ -80,14 +85,17 @@ export const api = createApi({
         method: "POST",
         body: {
           ...data,
-          projectId // projectId теперь в body
+          projectId,
         },
       }),
-      invalidatesTags: ["Layer"],
+      // ИСПРАВЛЕНО: Инвалидируем кэш конкретного проекта
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Layer", id: `PROJECT_${projectId}` },
+      ],
     }),
-    
+
     updateLayer: builder.mutation<
-      Layer, 
+      Layer,
       { layerId: string; projectId: string; data: Partial<Layer> }
     >({
       query: ({ layerId, projectId, data }) => ({
@@ -95,33 +103,92 @@ export const api = createApi({
         method: "PATCH",
         body: {
           ...data,
-          projectId // projectId обязательно в body
+          projectId,
         },
       }),
-      invalidatesTags: (result, error, { layerId }) => [{ type: "Layer", id: layerId }],
+      // КРИТИЧНО: Оптимистическое обновление кэша
+      async onQueryStarted(
+        { layerId, projectId, data },
+        { dispatch, queryFulfilled }
+      ) {
+        console.log(
+          "🔄 [RTK Query] Starting optimistic update for layer:",
+          layerId
+        );
+
+        // Оптимистически обновляем кэш
+        const patchResult = dispatch(
+          api.util.updateQueryData("getLayers", projectId, (draft) => {
+            const layerIndex = draft.findIndex((l) => l.id === layerId);
+            if (layerIndex !== -1) {
+              // Обновляем данные слоя
+              if (data.data !== undefined) {
+                draft[layerIndex].data = data.data;
+              }
+              if (data.isVisible !== undefined) {
+                draft[layerIndex].isVisible = data.isVisible;
+              }
+              if (data.opacity !== undefined) {
+                draft[layerIndex].opacity = data.opacity;
+              }
+              if (data.name !== undefined) {
+                draft[layerIndex].name = data.name;
+              }
+              if (data.order !== undefined) {
+                draft[layerIndex].order = data.order;
+              }
+              console.log("✅ [RTK Query] Cache updated optimistically");
+            } else {
+              console.warn("⚠️ [RTK Query] Layer not found in cache:", layerId);
+            }
+          })
+        );
+
+        try {
+          const result = await queryFulfilled;
+          console.log("✅ [RTK Query] Server confirmed update:", result);
+
+          // Дополнительно обновляем Redux store для синхронизации
+          if (result.data.data && Array.isArray(result.data.data)) {
+            dispatch(setObjects(result.data.data as GraphicObject[]));
+          }
+        } catch (error) {
+          console.error("❌ [RTK Query] Update failed, rolling back:", error);
+          patchResult.undo();
+        }
+      },
+      // ИСПРАВЛЕНО: Инвалидируем кэш конкретного проекта
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Layer", id: `PROJECT_${projectId}` },
+      ],
     }),
-    
+
     deleteLayer: builder.mutation<
-      { message: string }, 
+      { message: string },
       { layerId: string; projectId: string }
     >({
       query: ({ layerId, projectId }) => ({
         url: `/layers/${layerId}`,
         method: "DELETE",
-        body: { projectId } // projectId в body для DELETE
+        body: { projectId },
       }),
-      invalidatesTags: ["Layer"],
+      // ИСПРАВЛЕНО: Инвалидируем кэш конкретного проекта
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Layer", id: `PROJECT_${projectId}` },
+      ],
     }),
 
-    // HISTORY ================= (теперь полностью функциональный)
+    // HISTORY =================
     getHistory: builder.query<History[], string>({
       query: (projectId) => ({
         url: `/history`,
-        params: { projectId }
+        params: { projectId },
       }),
-      providesTags: ["History"],
+      providesTags: (result, error, projectId) => [
+        { type: "History", id: `PROJECT_${projectId}` },
+      ],
     }),
-    
+
     addHistory: builder.mutation<
       History,
       { projectId: string; data: Partial<History> }
@@ -133,22 +200,26 @@ export const api = createApi({
           projectId,
           action: data.action,
           data: data.data || {},
-          layerId: data.layerId || null
+          layerId: data.layerId || null,
         },
       }),
-      invalidatesTags: ["History"],
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "History", id: `PROJECT_${projectId}` },
+      ],
     }),
-    
+
     deleteHistory: builder.mutation<
-      { message: string }, 
+      { message: string },
       { historyId: string; projectId: string }
     >({
       query: ({ historyId, projectId }) => ({
         url: `/history/${historyId}`,
         method: "DELETE",
-        body: { projectId }
+        body: { projectId },
       }),
-      invalidatesTags: ["History"],
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "History", id: `PROJECT_${projectId}` },
+      ],
     }),
   }),
 });
@@ -165,5 +236,5 @@ export const {
   useDeleteLayerMutation,
   useGetHistoryQuery,
   useAddHistoryMutation,
-  useDeleteHistoryMutation, // Добавлен новый хук
+  useDeleteHistoryMutation,
 } = api;

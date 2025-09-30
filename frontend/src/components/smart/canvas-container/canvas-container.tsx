@@ -1,12 +1,13 @@
 import { useState, useCallback, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+// import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import type { RootState } from "@/core/store";
 import { Canvas } from "@/components/smart";
 import type {
   GraphicObject,
   GraphicObjectType,
 } from "@/core/types/interfaces/igraphic-objects.ts";
-import { addObject } from "@/core/store/slices/graphicObjectSlice.ts";
+// import { addObject } from "@/core/store/slices/graphicObjectSlice.ts";
 import { useUpdateLayerMutation } from "@/core/store/api";
 import { useHistoryManager, useGraphicsData } from "@/core/hooks";
 import type { Layer } from "@/core/types/interfaces/entities";
@@ -22,7 +23,7 @@ export const CanvasContainer = ({
   activeLayerId,
   layersData,
 }: CanvasContainerProps) => {
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch();
   const activeTool = useSelector((state: RootState) => state.tool.activeTool);
   const activeColor = useSelector((state: RootState) => state.tool.strokeColor);
 
@@ -31,7 +32,8 @@ export const CanvasContainer = ({
   const nextId = useRef(0);
 
   // Находим активный слой по ID
-  const activeLayer = layersData?.find((layer) => layer.id === activeLayerId) || null;
+  const activeLayer =
+    layersData?.find((layer) => layer.id === activeLayerId) || null;
 
   const { visibleElements } = useGraphicsData({
     layersData: layersData || [], // Предотвращаем передачу undefined
@@ -64,10 +66,21 @@ export const CanvasContainer = ({
 
   const handleMouseDown = useCallback(
     (pos: { x: number; y: number }) => {
-      console.log('Mouse down at:', pos, 'Active layer:', activeLayerId, 'Tool:', activeTool);
-      
+      console.log(
+        "Mouse down at:",
+        pos,
+        "Active layer:",
+        activeLayerId,
+        "Tool:",
+        activeTool
+      );
+
       if (!layersData || !activeLayerId || !activeLayer) {
-        console.warn('Missing required data:', { layersData: !!layersData, activeLayerId, activeLayer: !!activeLayer });
+        console.warn("Missing required data:", {
+          layersData: !!layersData,
+          activeLayerId,
+          activeLayer: !!activeLayer,
+        });
         return;
       }
 
@@ -146,7 +159,7 @@ export const CanvasContainer = ({
           break;
       }
 
-      console.log('Created draft:', newDraft);
+      console.log("Created draft:", newDraft);
       setDraft(newDraft);
     },
     [
@@ -166,7 +179,7 @@ export const CanvasContainer = ({
 
       setDraft((prev) => {
         if (!prev) return null;
-        
+
         let updatedDraft: GraphicObject;
 
         switch (prev.type) {
@@ -210,7 +223,7 @@ export const CanvasContainer = ({
             break;
         }
 
-        console.log('Updated draft:', updatedDraft);
+        console.log("Updated draft:", updatedDraft);
         return updatedDraft;
       });
     },
@@ -218,8 +231,8 @@ export const CanvasContainer = ({
   );
 
   const handleMouseUp = useCallback(async () => {
-    console.log('Mouse up, isDrawing:', isDrawingRef.current, 'draft:', draft);
-    
+    console.log("Mouse up, isDrawing:", isDrawingRef.current, "draft:", draft);
+
     if (!isDrawingRef.current || !draft || !activeLayer) {
       isDrawingRef.current = false;
       setDraft(null);
@@ -228,55 +241,63 @@ export const CanvasContainer = ({
 
     isDrawingRef.current = false;
 
-    // Проверяем, что объект валиден перед сохранением
+    // Валидация
     let isValid = true;
-    if (draft.type === "freePath" && (!draft.points || draft.points.length < 2)) {
+    if (
+      draft.type === "freePath" &&
+      (!draft.points || draft.points.length < 2)
+    ) {
       isValid = false;
-    } else if (draft.type === "line" && (!draft.points || draft.points.length < 4)) {
+    } else if (
+      draft.type === "line" &&
+      (!draft.points || draft.points.length < 4)
+    ) {
       isValid = false;
-    } else if (draft.type === "rect" && (draft.width === 0 || draft.height === 0)) {
+    } else if (
+      draft.type === "rect" &&
+      (draft.width === 0 || draft.height === 0)
+    ) {
       isValid = false;
     } else if (draft.type === "circle" && draft.radius === 0) {
       isValid = false;
     }
 
     if (isValid) {
-      console.log('Finalizing draft:', draft);
-      
-      // Добавляем объект в Redux store
-      dispatch(addObject(draft));
+      console.log("Finalizing draft:", draft);
+
+      // УБИРАЕМ dispatch - пусть RTK Query управляет состоянием
+      // dispatch(addObject(draft));
 
       try {
-        // Получаем текущие данные слоя
         const currentLayerData = Array.isArray(activeLayer.data)
-          ? activeLayer.data as GraphicObject[]
+          ? (activeLayer.data as GraphicObject[])
           : [];
-        
-        // Добавляем новый объект
+
         const updatedData = [...currentLayerData, draft];
-        
-        console.log('Updating layer with data:', updatedData);
-        
-        // Обновляем слой с оптимистическим обновлением
+
+        console.log("Updating layer with data:", updatedData);
+
+        // Используем оптимистическое обновление
         await updateLayer({
           layerId: activeLayer.id,
           projectId: projectId,
           data: { data: updatedData },
         }).unwrap();
-        
-        console.log('Layer updated successfully');
+
+        console.log("Layer updated successfully");
       } catch (error) {
-        console.error('Error updating layer:', error);
+        console.error("Error updating layer:", error);
+        // Можно добавить откат изменений
       }
     } else {
-      console.warn('Invalid draft, skipping save:', draft);
+      console.warn("Invalid draft, skipping save:", draft);
     }
 
     setDraft(null);
-  }, [draft, activeLayer, projectId, dispatch, updateLayer]);
+  }, [draft, activeLayer, projectId, updateLayer]); // Убрали dispatch из зависимостей
 
   // Логируем visibleElements для отладки
-  console.log('Visible elements:', visibleElements);
+  console.log("Visible elements:", visibleElements);
 
   return (
     <Canvas
