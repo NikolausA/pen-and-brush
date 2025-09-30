@@ -25,11 +25,44 @@ export const Home = () => {
 
   const handleClick = () => setIsModalOpen(true);
 
+  // const handleCreateProject = async (
+  //   name: string,
+  //   width: number,
+  //   height: number
+  // ): Promise<void> => {
+  //   // Явно указываем возвращаемый тип
+  //   console.log("create was called with:", { name, width, height });
+
+  //   // Временный прямой fetch для диагностики
+  //   try {
+  //     const testResponse = await fetch("/api/projects", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ name, width, height }),
+  //     });
+
+  //     console.log("Direct fetch status:", testResponse.status);
+  //     const testResult = await testResponse.json();
+  //     console.log("Direct fetch result:", testResult);
+
+  //     // После успешного создания - навигация и закрытие модалки
+  //     navigate(`/projects/${testResult.id}`);
+  //     setIsModalOpen(false);
+  //   } catch (directError) {
+  //     console.error("Direct fetch error:", directError);
+  //     // Пробрасываем ошибку, чтобы модалка могла её обработать
+  //     throw directError;
+  //   }
+  // };
+
   const handleCreateProject = async (
     name: string,
     width: number,
     height: number
   ) => {
+    console.log("create was called");
     try {
       const newProject = await createProject({
         name,

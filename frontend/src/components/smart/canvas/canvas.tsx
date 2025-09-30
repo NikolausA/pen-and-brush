@@ -31,24 +31,24 @@ export const Canvas = ({
   useEffect(() => {
     if (stageRef.current) {
       const container = stageRef.current.container();
-      let cursor = 'default';
-      
+      let cursor = "default";
+
       switch (activeTool) {
-        case 'brush':
-          cursor = 'crosshair';
+        case "brush":
+          cursor = "crosshair";
           break;
-        case 'eraser':
-          cursor = 'grab';
+        case "eraser":
+          cursor = "grab";
           break;
-        case 'line':
-        case 'rectangle':
-        case 'circle':
-          cursor = 'crosshair';
+        case "line":
+        case "rectangle":
+        case "circle":
+          cursor = "crosshair";
           break;
         default:
-          cursor = 'default';
+          cursor = "default";
       }
-      
+
       container.style.cursor = cursor;
     }
   }, [activeTool]);
@@ -60,17 +60,17 @@ export const Canvas = ({
     e.evt.preventDefault();
     const stage = e.target.getStage();
     const pointerPos = stage.getPointerPosition();
-    
+
     if (pointerPos) {
-      console.log('Canvas event:', pointerPos);
+      // console.log('Canvas event:', pointerPos);
       handler(pointerPos);
     }
   };
 
   const renderElement = (element: GraphicObject, index: number) => {
     const key = `${element.id}-${index}`;
-    
-    console.log('Rendering element:', element);
+
+    // console.log('Rendering element:', element);
 
     switch (element.type) {
       case "freePath":
@@ -87,11 +87,13 @@ export const Canvas = ({
             perfectDrawEnabled={false}
             listening={false}
             globalCompositeOperation={
-              element.strokeColor === "#ffffff" ? "destination-out" : "source-over"
+              element.strokeColor === "#ffffff"
+                ? "destination-out"
+                : "source-over"
             }
           />
         );
-        
+
       case "line":
         if (!element.points || element.points.length < 4) return null;
         return (
@@ -105,7 +107,7 @@ export const Canvas = ({
             listening={false}
           />
         );
-        
+
       case "rect":
         return (
           <Rect
@@ -120,7 +122,7 @@ export const Canvas = ({
             listening={false}
           />
         );
-        
+
       case "circle":
         return (
           <Circle
@@ -134,9 +136,9 @@ export const Canvas = ({
             listening={false}
           />
         );
-        
+
       default:
-        console.warn('Unknown element type:', element.type);
+        console.warn("Unknown element type:", element.type);
         return null;
     }
   };
@@ -148,14 +150,14 @@ export const Canvas = ({
         width={width}
         height={height}
         onMouseDown={(e) => {
-          console.log('Stage mouse down');
+          // console.log('Stage mouse down');
           handleMouseEvent(e, onMouseDown);
         }}
         onMouseMove={(e) => {
           handleMouseEvent(e, onMouseMove);
         }}
         onMouseUp={(e) => {
-          console.log('Stage mouse up');
+          // console.log('Stage mouse up');
           onMouseUp();
         }}
         className={styles.stage}
