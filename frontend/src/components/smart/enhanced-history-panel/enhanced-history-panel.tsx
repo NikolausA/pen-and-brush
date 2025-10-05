@@ -1,105 +1,197 @@
-// @ts-nocheck
 import { useState, useCallback } from "react";
-import { useGetHistoryQuery, useUpdateLayerMutation, useDeleteHistoryMutation } from "@/core/store/api";
+import {
+  useGetHistoryQuery,
+  useUpdateLayerMutation,
+  useDeleteHistoryMutation,
+  useGetLayersQuery,
+} from "@/core/store/api";
 import { HistoryList } from "@/components/smart";
-import type { Layer } from "@/core/types/interfaces/entities";
+import type { Layer, History } from "@/core/types/interfaces/entities";
+import { computeDiffAndDeleteObjects } from "@/core/utils/historyDiff";
 
 interface HistoryPanelProps {
   projectId: string;
 }
 
 export const EnhancedHistoryPanel = ({ projectId }: HistoryPanelProps) => {
-  const { data: historyData = [], isLoading, refetch } = useGetHistoryQuery(projectId);
-  const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
+  const {
+    data: historyDataRaw = [],
+    isLoading,
+    refetch,
+  } = useGetHistoryQuery(projectId);
+
+  // КРИТИЧНО: Инвертируем массив (бэкенд возвращает DESC, нам нужен ASC)
+  const historyData = [...historyDataRaw].reverse();
+
+  const { data: currentLayers = [], refetch: refetchLayers } =
+    useGetLayersQuery(projectId);
+
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(
+    null
+  );
   const [updateLayer] = useUpdateLayerMutation();
   const [deleteHistory] = useDeleteHistoryMutation();
 
-  const handleHistoryItemClick = useCallback(
-    async (index: number) => {
-      const selectedHistory = historyData[index];
-      if (!selectedHistory) return;
+  console.log("🔧 [PANEL] EnhancedHistoryPanel rendered");
+  console.log("🔧 [PANEL] History items count:", historyData.length);
+
+  // Парсинг layers из JSONB структуры бэкенда
+  const parseLayers = useCallback((data: any): Layer[] => {
+    if (data && typeof data === "object" && Array.isArray(data.layers))
+      return data.layers;
+    if (Array.isArray(data)) return data;
+    return [];
+  }, []);
+
+  // 🔄 Восстановление состояния
+  const restoreHistoryState = useCallback(
+    async (historyItem: History) => {
+      console.log("🔄 [RESTORE] Called for:", historyItem.action);
+      if (!historyItem) return;
 
       try {
-        // Безопасное извлечение данных слоев из истории
-        const historyData = selectedHistory.data;
-        let layers: Layer[] = [];
+        const layers = parseLayers(historyItem.data);
 
-        // Проверяем различные возможные структуры данных истории
-        if (historyData?.layers && Array.isArray(historyData.layers)) {
-          layers = historyData.layers;
-        } else if (historyData?.data?.layers && Array.isArray(historyData.data.layers)) {
-          layers = historyData.data.layers;
-        } else {
-          console.warn("No valid layers found in history entry:", selectedHistory);
+        if (!layers.length) {
+          console.warn("No valid layers found in history entry:", historyItem);
           return;
         }
 
-        console.log(`Restoring history state with ${layers.length} layers:`, layers);
+        console.log(
+          `🔄 [RESTORE] Restoring history state with ${layers.length} layers`
+        );
 
-        // Восстанавливаем состояние каждого слоя
-        const updatePromises = layers.map(async (layer: Layer) => {
-          try {
-            await updateLayer({
+        await Promise.all(
+          layers.map((layer) =>
+            updateLayer({
               layerId: layer.id,
-              projectId: projectId,
+              projectId,
               data: {
                 name: layer.name,
                 order: layer.order,
                 isVisible: layer.isVisible,
                 opacity: layer.opacity,
-                data: layer.data
-              }
-            }).unwrap();
-          } catch (error) {
-            console.error(`Failed to restore layer ${layer.id}:`, error);
-            throw error;
-          }
-        });
+                data: layer.data,
+              },
+            }).unwrap()
+          )
+        );
 
-        await Promise.all(updatePromises);
-        
-        setSelectedHistoryIndex(index);
-        console.log(`History state restored successfully for index ${index}`);
-        
+        await refetchLayers();
+
+        setSelectedHistoryId(historyItem.id);
+        console.log(`✅ [RESTORE] History state restored: ${historyItem.id}`);
       } catch (error) {
-        console.error("Error restoring history state:", error);
-        // Сбрасываем выделение при ошибке
-        setSelectedHistoryIndex(null);
+        console.error("❌ [RESTORE] Error restoring history state:", error);
+        setSelectedHistoryId(null);
       }
     },
-    [historyData, updateLayer, projectId]
+    [updateLayer, projectId, parseLayers, refetchLayers]
   );
 
+  // 🗑 Удаление истории и объектов
   const handleDeleteHistoryItem = useCallback(
-    async (index: number) => {
-      const historyItem = historyData[index];
+    async (historyItem: History) => {
+      console.log("🗑 [DELETE HANDLER] Called for:", historyItem.action);
       if (!historyItem) return;
 
       try {
-        await deleteHistory({
-          historyId: historyItem.id,
-          projectId: projectId
-        }).unwrap();
+        const deletedIndex = historyData.findIndex(
+          (h) => h.id === historyItem.id
+        );
 
-        console.log('History item deleted:', historyItem.id);
-        
-        // Сбрасываем выделение если удаляем выбранный элемент
-        if (selectedHistoryIndex === index) {
-          setSelectedHistoryIndex(null);
+        console.log("🗑 [DELETE] Deleting history ID:", historyItem.id);
+        console.log("🗑 [DELETE] Index in history array:", deletedIndex);
+        console.log("🗑 [DELETE] Total history items:", historyData.length);
+
+        const parsedDeletedLayers = parseLayers(historyItem.data);
+
+        if (deletedIndex === 0) {
+          console.log("🗑 [FIRST] Clearing all layers (index 0)");
+          await Promise.all(
+            currentLayers.map((layer) =>
+              updateLayer({
+                layerId: layer.id,
+                projectId,
+                data: {
+                  name: layer.name,
+                  order: layer.order,
+                  isVisible: layer.isVisible,
+                  opacity: layer.opacity,
+                  data: [],
+                },
+              }).unwrap()
+            )
+          );
+          setSelectedHistoryId(null);
+        } else {
+          const prevHistory = historyData[deletedIndex - 1];
+          const parsedPrevLayers = parseLayers(prevHistory.data);
+
+          console.log("🔍 [DIFF] Computing diff between snapshots");
+          console.log(
+            "🔍 [DIFF] Prev objects:",
+            parsedPrevLayers[0]?.data?.length || 0
+          );
+          console.log(
+            "🔍 [DIFF] Deleted objects:",
+            parsedDeletedLayers[0]?.data?.length || 0
+          );
+
+          const diffSuccess = await computeDiffAndDeleteObjects(
+            parsedPrevLayers,
+            parsedDeletedLayers,
+            currentLayers,
+            updateLayer,
+            projectId
+          );
+
+          if (diffSuccess) {
+            console.log("✅ [DIFF] Objects deleted via diff");
+          } else {
+            console.warn("⚠️ [DIFF] No objects to delete (empty diff)");
+          }
+
+          setSelectedHistoryId(prevHistory.id);
         }
-        
-        // Обновляем список истории
-        refetch();
+
+        console.log("🔄 [REFRESH] Refetching layers...");
+        await refetchLayers();
+
+        const freshLayers = await refetchLayers().unwrap();
+        console.log(
+          "✅ [REFRESH] Fresh data from DB:",
+          freshLayers[0]?.data?.map((o: any) => o.id) || []
+        );
+
+        await deleteHistory({ historyId: historyItem.id, projectId }).unwrap();
+        await refetch();
+
+        console.log("✅ [SUCCESS] History item deleted:", historyItem.id);
       } catch (error) {
-        console.error('Error deleting history item:', error);
+        console.error("❌ [ERROR] Failed to delete history item:", error);
       }
     },
-    [historyData, deleteHistory, projectId, selectedHistoryIndex, refetch]
+    [
+      deleteHistory,
+      projectId,
+      historyData,
+      currentLayers,
+      updateLayer,
+      refetch,
+      refetchLayers,
+      parseLayers,
+    ]
+  );
+
+  console.log(
+    "🔧 [PANEL] Passing handleDeleteHistoryItem:",
+    typeof handleDeleteHistoryItem
   );
 
   if (isLoading) {
     return (
-      <div style={{ padding: 16, textAlign: 'center' }}>
+      <div style={{ padding: 16, textAlign: "center" }}>
         Загрузка истории...
       </div>
     );
@@ -107,12 +199,14 @@ export const EnhancedHistoryPanel = ({ projectId }: HistoryPanelProps) => {
 
   if (historyData.length === 0) {
     return (
-      <div style={{ 
-        padding: 16, 
-        textAlign: 'center', 
-        color: '#8B949E',
-        fontSize: '14px'
-      }}>
+      <div
+        style={{
+          padding: 16,
+          textAlign: "center",
+          color: "#8B949E",
+          fontSize: "14px",
+        }}
+      >
         История изменений пуста
       </div>
     );
@@ -121,8 +215,8 @@ export const EnhancedHistoryPanel = ({ projectId }: HistoryPanelProps) => {
   return (
     <HistoryList
       history={historyData}
-      selectedIndex={selectedHistoryIndex}
-      onHistoryClick={handleHistoryItemClick}
+      selectedId={selectedHistoryId}
+      onHistoryClick={restoreHistoryState}
       onHistoryDelete={handleDeleteHistoryItem}
     />
   );

@@ -26,8 +26,11 @@ export interface History {
   id: string;
   projectId: string;
   action: string;
-  layerId?: string;
-  data: Layer[];
+  layerId?: string | null;
+  data: {
+    layers: Layer[];
+    timestamp?: string;
+  };
   createdAt: string;
   updatedAt?: string;
 }

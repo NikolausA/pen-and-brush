@@ -179,6 +179,9 @@ export const api = createApi({
     }),
 
     // HISTORY =================
+    // Фрагмент из api.ts - только история и связанные endpoints
+
+    // HISTORY =================
     getHistory: builder.query<History[], string>({
       query: (projectId) => ({
         url: `/history`,
@@ -199,7 +202,8 @@ export const api = createApi({
         body: {
           projectId,
           action: data.action,
-          data: data.data || {},
+          // ✅ ИСПРАВЛЕНО: data как объект { layers: [...] } для JSONB бэкенда
+          data: data.data || { layers: [] },
           layerId: data.layerId || null,
         },
       }),

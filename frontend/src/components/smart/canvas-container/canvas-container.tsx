@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from "react";
-// import { useDispatch, useSelector } from "react-redux";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/core/store";
 import { Canvas } from "@/components/smart";
@@ -7,36 +6,34 @@ import type {
   GraphicObject,
   GraphicObjectType,
 } from "@/core/types/interfaces/igraphic-objects.ts";
-// import { addObject } from "@/core/store/slices/graphicObjectSlice.ts";
-import { useUpdateLayerMutation } from "@/core/store/api";
+import { useGetLayersQuery, useUpdateLayerMutation } from "@/core/store/api";
 import { useHistoryManager, useGraphicsData } from "@/core/hooks";
 import type { Layer } from "@/core/types/interfaces/entities";
 
 interface CanvasContainerProps {
   projectId: string;
   activeLayerId: string | null;
-  layersData: Layer[] | undefined; // Уточняем, что layersData может быть undefined
+  layersData: Layer[] | undefined;
 }
 
 export const CanvasContainer = ({
   projectId,
   activeLayerId,
-  layersData,
 }: CanvasContainerProps) => {
-  // const dispatch = useDispatch();
   const activeTool = useSelector((state: RootState) => state.tool.activeTool);
   const activeColor = useSelector((state: RootState) => state.tool.strokeColor);
+  const { data: layersData = [], refetch: refetchLayers } =
+    useGetLayersQuery(projectId);
+
+  const activeLayer =
+    layersData.find((layer) => layer.id === activeLayerId) || null;
 
   const [draft, setDraft] = useState<GraphicObject | null>(null);
   const isDrawingRef = useRef(false);
   const nextId = useRef(0);
 
-  // Находим активный слой по ID
-  const activeLayer =
-    layersData?.find((layer) => layer.id === activeLayerId) || null;
-
   const { visibleElements } = useGraphicsData({
-    layersData: layersData || [], // Предотвращаем передачу undefined
+    layersData: layersData || [],
     draft,
     activeLayer,
   });
@@ -44,7 +41,6 @@ export const CanvasContainer = ({
   const { addToHistory } = useHistoryManager(projectId);
   const [updateLayer] = useUpdateLayerMutation();
 
-  // Функция маппинга инструментов в типы графических объектов
   const mapToolToGraphicType = useCallback(
     (tool: string): GraphicObjectType => {
       switch (tool) {
@@ -84,10 +80,7 @@ export const CanvasContainer = ({
         return;
       }
 
-      // Добавляем в историю
-      addToHistory(`Добавлен элемент: ${activeTool}`, {
-        layers: layersData,
-      });
+      // ❌ УБРАНО: addToHistory здесь (было ДО создания объекта)
 
       isDrawingRef.current = true;
       const id = `element-${Date.now()}-${nextId.current++}`;
@@ -168,7 +161,6 @@ export const CanvasContainer = ({
       layersData,
       activeLayerId,
       activeLayer,
-      addToHistory,
       mapToolToGraphicType,
     ]
   );
@@ -223,7 +215,6 @@ export const CanvasContainer = ({
             break;
         }
 
-        console.log("Updated draft:", updatedDraft);
         return updatedDraft;
       });
     },
@@ -262,47 +253,60 @@ export const CanvasContainer = ({
       isValid = false;
     }
 
-    if (isValid) {
-      console.log("Finalizing draft:", draft);
-
-      // УБИРАЕМ dispatch - пусть RTK Query управляет состоянием
-      // dispatch(addObject(draft));
-
-      try {
-        const currentLayerData = Array.isArray(activeLayer.data)
-          ? (activeLayer.data as GraphicObject[])
-          : [];
-
-        const updatedData = [...currentLayerData, draft];
-
-        console.log("Updating layer with data:", updatedData);
-
-        // Используем оптимистическое обновление
-        await updateLayer({
-          layerId: activeLayer.id,
-          projectId: projectId,
-          data: { data: updatedData },
-        }).unwrap();
-
-        console.log("Layer updated successfully");
-      } catch (error) {
-        console.error("Error updating layer:", error);
-        // Можно добавить откат изменений
-      }
-    } else {
+    if (!isValid) {
       console.warn("Invalid draft, skipping save:", draft);
+      setDraft(null);
+      return;
+    }
+
+    console.log("Finalizing draft:", draft);
+
+    try {
+      const currentLayerData = Array.isArray(activeLayer.data)
+        ? (activeLayer.data as GraphicObject[])
+        : [];
+
+      const updatedData = [...currentLayerData, draft];
+
+      console.log("Updating layer with data:", updatedData);
+
+      // Обновляем слой
+      await updateLayer({
+        layerId: activeLayer.id,
+        projectId: projectId,
+        data: { data: updatedData },
+      }).unwrap();
+
+      // Рефетчим для гарантии актуальности
+      await refetchLayers();
+
+      const freshLayers = await refetchLayers().unwrap();
+
+      console.log(
+        "🔍 [MOUSEUP] Layer updated, object IDs:",
+        freshLayers[0]?.data?.map((o: any) => o.id) || "No data"
+      );
+
+      // ✅ ДОБАВЛЕНО: История сохраняется ПОСЛЕ успешного создания объекта
+      console.log("💾 [HISTORY] Saving snapshot AFTER object creation");
+      addToHistory(`Добавлен элемент: ${draft.type}`, {
+        layers: freshLayers, // Используем свежие данные
+      });
+
+      console.log("Layer updated and history saved successfully");
+    } catch (error) {
+      console.error("Error updating layer:", error);
     }
 
     setDraft(null);
-  }, [draft, activeLayer, projectId, updateLayer]); // Убрали dispatch из зависимостей
+  }, [draft, activeLayer, projectId, updateLayer, refetchLayers, addToHistory]);
 
-  // Логируем visibleElements для отладки
   console.log("Visible elements:", visibleElements);
 
   return (
     <Canvas
       width={window.innerWidth - 300}
-      height={window.innerHeight - 60} // Учитываем высоту топ-меню
+      height={window.innerHeight - 60}
       elements={visibleElements}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
