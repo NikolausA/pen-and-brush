@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useCallback } from "react";
 import { useAddHistoryMutation } from "@/core/store/api";
-import type { Layer, History } from "@/core/types/interfaces/entities";
+import type { Layer } from "@/core/types/interfaces/entities";
 
 interface HistoryActionData {
   layers?: Layer[];
@@ -13,26 +13,38 @@ export const useHistoryManager = (projectId: string) => {
 
   const addToHistory = useCallback(
     async (action: string, payload: HistoryActionData) => {
+      console.log(
+        "💾 [HISTORY] Saving snapshot:",
+        action,
+        "Layer 0 objects count:",
+        payload.layers?.[0]?.data?.length || 0
+      );
+      console.log(
+        "💾 [HISTORY] Object IDs in snapshot:",
+        payload.layers?.[0]?.data?.map((o: any) => o.id) || []
+      );
+
       try {
+        // ✅ ИСПРАВЛЕНО: Обертка { layers: [...] } для совместимости с бэкенд JSONB
         await addHistory({
           projectId,
           data: {
             action,
-            data: payload,
-            timestamp: new Date().toISOString()
-          } as Partial<History>,
+            layerId: payload.layerId || null,
+            data: { layers: payload.layers || [] }, // Обертка для бэкенда
+            timestamp: new Date().toISOString(),
+          },
         }).unwrap();
-        
-        console.log('History added:', { action, projectId, payload });
+
+        console.log("✅ [HISTORY] Snapshot saved successfully");
       } catch (error) {
-        console.error('Failed to add history:', error);
-        // Не прерываем процесс рисования из-за ошибки истории
+        console.error("❌ [HISTORY] Failed to save snapshot:", error);
       }
     },
     [addHistory, projectId]
   );
 
-  // Дополнительные утилиты для работы с историей
+  // Утилиты для различных типов действий
   const addLayerCreatedHistory = useCallback(
     (layerName: string, layers: Layer[]) => {
       addToHistory(`Создан слой: ${layerName}`, { layers });
@@ -61,11 +73,11 @@ export const useHistoryManager = (projectId: string) => {
     [addToHistory]
   );
 
-  return { 
+  return {
     addToHistory,
     addLayerCreatedHistory,
-    addLayerDeletedHistory, 
+    addLayerDeletedHistory,
     addDrawingHistory,
-    addLayerReorderedHistory
+    addLayerReorderedHistory,
   };
 };
