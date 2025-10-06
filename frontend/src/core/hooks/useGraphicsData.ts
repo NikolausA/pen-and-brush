@@ -16,9 +16,9 @@ import {
 import type { Layer } from "@/core/types/interfaces/entities";
 
 interface UseGraphicsDataProps {
-  layersData: Layer[] | undefined; // Уточняем, что layersData может быть undefined
+  layersData: Layer[] | undefined;
   draft: GraphicObject | null;
-  activeLayer: Layer | null; // Приводим в соответствие с CanvasContainer
+  activeLayer: Layer | null;
 }
 
 export const useGraphicsData = ({
@@ -78,7 +78,7 @@ export const useGraphicsData = ({
           }
           return {
             ...obj,
-            points: [...obj.points], // Глубокая копия точек
+            points: [...obj.points],
           } as LineObject;
         }
 
@@ -90,11 +90,10 @@ export const useGraphicsData = ({
           }
           return {
             ...obj,
-            points: [...obj.points], // Глубокая копия точек
+            points: [...obj.points],
           } as FreePathObject;
         }
 
-        // Fallback - возвращаем объект как есть
         return obj;
       } catch (error) {
         console.error("Error enhancing graphic object:", error, obj);
@@ -129,7 +128,8 @@ export const useGraphicsData = ({
         .filter((obj): obj is GraphicObject => obj !== null)
         .map((obj) => ({
           ...obj,
-          opacity: Math.max(0, Math.min(1, layer.opacity / 100)),
+          // ✅ ИСПРАВЛЕНО: Сохраняем opacity в формате 0-100, добавляем метаданные слоя
+          opacity: obj.opacity ?? 100, // Сохраняем оригинальное значение объекта
           layerId: layer.id,
           layerOrder: layer.order ?? 0,
           isDraft: false,
@@ -142,7 +142,7 @@ export const useGraphicsData = ({
       if (enhancedDraft) {
         elements.push({
           ...enhancedDraft,
-          opacity: Math.max(0, Math.min(1, activeLayer.opacity / 100)),
+          opacity: enhancedDraft.opacity ?? 100, // Сохраняем оригинальное значение
           layerId: activeLayer.id,
           layerOrder: activeLayer.order ?? 0,
           isDraft: true,
@@ -152,12 +152,23 @@ export const useGraphicsData = ({
       }
     }
 
-    // Сортируем элементы по порядку слоев
-    return elements.sort((a, b) => {
+    // Сортируем элементы по порядку слоев (снизу вверх)
+    const sorted = elements.sort((a, b) => {
       const orderA = a.layerOrder ?? 0;
       const orderB = b.layerOrder ?? 0;
       return orderA - orderB;
     });
+
+    console.log("📊 useGraphicsData result:", {
+      totalElements: sorted.length,
+      byLayer: sorted.reduce((acc, el) => {
+        const key = el.layerId;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
+    });
+
+    return sorted;
   }, [layersData, draft, activeLayer, enhanceGraphicObjectForCanvas]);
 
   // Дополнительные утилитарные функции

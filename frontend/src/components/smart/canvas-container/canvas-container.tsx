@@ -80,11 +80,12 @@ export const CanvasContainer = ({
         return;
       }
 
-      // ❌ УБРАНО: addToHistory здесь (было ДО создания объекта)
-
       isDrawingRef.current = true;
       const id = `element-${Date.now()}-${nextId.current++}`;
       const graphicType = mapToolToGraphicType(activeTool);
+
+      // Получаем прозрачность активного слоя для нового объекта
+      const layerOpacity = activeLayer.opacity || 100;
 
       let newDraft: GraphicObject;
 
@@ -97,6 +98,7 @@ export const CanvasContainer = ({
             strokeColor: activeTool === "eraser" ? "#ffffff" : activeColor,
             strokeWidth: activeTool === "eraser" ? 20 : 5,
             points: [pos.x, pos.y],
+            opacity: 100, // Объект по умолчанию непрозрачный
           };
           break;
 
@@ -108,6 +110,7 @@ export const CanvasContainer = ({
             strokeColor: activeColor,
             strokeWidth: 2,
             points: [pos.x, pos.y, pos.x, pos.y],
+            opacity: 100,
           };
           break;
 
@@ -123,6 +126,7 @@ export const CanvasContainer = ({
             width: 0,
             height: 0,
             fillColor: activeColor,
+            opacity: 100,
           };
           break;
 
@@ -137,6 +141,7 @@ export const CanvasContainer = ({
             y: pos.y,
             radius: 0,
             fillColor: activeColor,
+            opacity: 100,
           };
           break;
 
@@ -148,11 +153,12 @@ export const CanvasContainer = ({
             strokeColor: activeColor,
             strokeWidth: 5,
             points: [pos.x, pos.y],
+            opacity: 100,
           };
           break;
       }
 
-      console.log("Created draft:", newDraft);
+      console.log("Created draft:", newDraft, "Layer opacity:", layerOpacity);
       setDraft(newDraft);
     },
     [
@@ -287,10 +293,9 @@ export const CanvasContainer = ({
         freshLayers[0]?.data?.map((o: any) => o.id) || "No data"
       );
 
-      // ✅ ДОБАВЛЕНО: История сохраняется ПОСЛЕ успешного создания объекта
       console.log("💾 [HISTORY] Saving snapshot AFTER object creation");
       addToHistory(`Добавлен элемент: ${draft.type}`, {
-        layers: freshLayers, // Используем свежие данные
+        layers: freshLayers,
       });
 
       console.log("Layer updated and history saved successfully");
@@ -302,6 +307,15 @@ export const CanvasContainer = ({
   }, [draft, activeLayer, projectId, updateLayer, refetchLayers, addToHistory]);
 
   console.log("Visible elements:", visibleElements);
+  console.log("Layers data with opacity:", layersData);
+
+  // Подготавливаем данные слоев для Canvas
+  const layersForCanvas = layersData.map((layer) => ({
+    id: layer.id,
+    opacity: layer.opacity || 100,
+    isVisible: layer.isVisible !== false,
+    order: layer.order || 0,
+  }));
 
   return (
     <Canvas
@@ -312,6 +326,7 @@ export const CanvasContainer = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       activeTool={activeTool}
+      layersData={layersForCanvas}
     />
   );
 };

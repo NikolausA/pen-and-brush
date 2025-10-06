@@ -16,7 +16,7 @@ export interface BaseGraphicObject {
   strokeWidth: number;
 
   // Дополнительные свойства для рендеринга (опциональные)
-  opacity?: number; // 0-1, для слоя
+  opacity?: number; // 0-100 (не 0-1!), для объекта
   layerOrder?: number; // порядок слоя для сортировки
   isDraft?: boolean; // является ли объект черновиком
 }
@@ -157,6 +157,17 @@ export const isValidGraphicObject = (obj: GraphicObject) => {
     return false;
   }
 
+  // Проверка opacity если присутствует (должно быть 0-100)
+  if (obj.opacity !== undefined) {
+    if (
+      typeof obj.opacity !== "number" ||
+      obj.opacity < 0 ||
+      obj.opacity > 100
+    ) {
+      return false;
+    }
+  }
+
   // Специфичные проверки для каждого типа
   switch (type) {
     case "line":
@@ -188,7 +199,8 @@ export const createLineObject = (
   layerId: string,
   points: number[],
   strokeColor: string,
-  strokeWidth: number = 1
+  strokeWidth: number = 1,
+  opacity: number = 100
 ): LineObject => ({
   id,
   layerId,
@@ -196,6 +208,7 @@ export const createLineObject = (
   points,
   strokeColor,
   strokeWidth,
+  opacity,
 });
 
 export const createFreePathObject = (
@@ -203,7 +216,8 @@ export const createFreePathObject = (
   layerId: string,
   points: number[],
   strokeColor: string,
-  strokeWidth: number = 5
+  strokeWidth: number = 5,
+  opacity: number = 100
 ): FreePathObject => ({
   id,
   layerId,
@@ -211,6 +225,7 @@ export const createFreePathObject = (
   points,
   strokeColor,
   strokeWidth,
+  opacity,
 });
 
 export const createRectObject = (
@@ -222,7 +237,8 @@ export const createRectObject = (
   height: number,
   strokeColor: string,
   fillColor: string,
-  strokeWidth: number = 1
+  strokeWidth: number = 1,
+  opacity: number = 100
 ): RectObject => ({
   id,
   layerId,
@@ -234,6 +250,7 @@ export const createRectObject = (
   strokeColor,
   strokeWidth,
   fillColor,
+  opacity,
 });
 
 export const createCircleObject = (
@@ -244,7 +261,8 @@ export const createCircleObject = (
   radius: number,
   strokeColor: string,
   fillColor: string,
-  strokeWidth: number = 1
+  strokeWidth: number = 1,
+  opacity: number = 100
 ): CircleObject => ({
   id,
   layerId,
@@ -255,4 +273,5 @@ export const createCircleObject = (
   strokeColor,
   strokeWidth,
   fillColor,
+  opacity,
 });
