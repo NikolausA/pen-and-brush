@@ -14,6 +14,12 @@ interface CanvasProps {
   onMouseMove: (pos: { x: number; y: number }) => void;
   onMouseUp: () => void;
   activeTool: string;
+  layersData?: Array<{
+    id: string;
+    opacity: number;
+    isVisible: boolean;
+    order: number;
+  }>;
 }
 
 export const Canvas = ({
@@ -24,10 +30,10 @@ export const Canvas = ({
   onMouseMove,
   onMouseUp,
   activeTool,
+  layersData = [],
 }: CanvasProps) => {
   const stageRef = useRef<any>(null);
 
-  // Устанавливаем курсор в зависимости от активного инструмента
   useEffect(() => {
     if (stageRef.current) {
       const container = stageRef.current.container();
@@ -62,15 +68,87 @@ export const Canvas = ({
     const pointerPos = stage.getPointerPosition();
 
     if (pointerPos) {
-      // console.log('Canvas event:', pointerPos);
       handler(pointerPos);
     }
   };
 
-  const renderElement = (element: GraphicObject, index: number) => {
-    const key = `${element.id}-${index}`;
+  // Получить данные слоя по ID
+  const getLayerData = (layerId: string) => {
+    return layersData.find((l) => l.id === layerId);
+  };
 
-    // console.log('Rendering element:', element);
+  // Группировка и сортировка элементов по слоям
+  const getSortedElements = () => {
+    console.log("🔍 Canvas received elements:", elements.length);
+    console.log("🔍 Canvas received layersData:", layersData);
+
+    // Группируем элементы по layerId
+    const elementsByLayer = new Map<string, GraphicObject[]>();
+
+    elements.forEach((element) => {
+      const layerId = element.layerId || "default";
+      if (!elementsByLayer.has(layerId)) {
+        elementsByLayer.set(layerId, []);
+      }
+      elementsByLayer.get(layerId)!.push(element);
+    });
+
+    console.log(
+      "🔍 Elements grouped by layer:",
+      Array.from(elementsByLayer.entries()).map(([id, els]) => ({
+        layerId: id,
+        count: els.length,
+        elements: els.map((e) => ({ type: e.type, id: e.id })),
+      }))
+    );
+
+    // Создаем массив [layerId, elements[]] и сортируем по order
+    const sortedLayers = Array.from(elementsByLayer.entries())
+      .map(([layerId, layerElements]) => {
+        const layer = getLayerData(layerId);
+        return {
+          layerId,
+          elements: layerElements,
+          order: layer?.order ?? 0,
+          opacity: layer?.opacity ?? 100,
+          isVisible: layer?.isVisible ?? true,
+        };
+      })
+      // КРИТИЧНО: Сортируем по возрастанию order (меньше = ниже, больше = выше)
+      .sort((a, b) => a.order - b.order);
+
+    console.log(
+      "✅ Sorted layers for rendering:",
+      sortedLayers.map((l) => ({
+        layerId: l.layerId.substring(0, 8),
+        order: l.order,
+        opacity: l.opacity,
+        isVisible: l.isVisible,
+        count: l.elements.length,
+      }))
+    );
+
+    return sortedLayers;
+  };
+
+  const renderElement = (element: GraphicObject, layerOpacity: number) => {
+    const key = element.id;
+
+    // Вычисляем итоговую прозрачность
+    const elementOpacity = element.opacity ?? 100;
+    const finalOpacity = (layerOpacity / 100) * (elementOpacity / 100);
+
+    console.log(`📍 Rendering ${element.type} ${element.id}:`, {
+      layerOpacity,
+      elementOpacity,
+      finalOpacity,
+    });
+
+    const commonProps = {
+      opacity: finalOpacity,
+      listening: false,
+      perfectDrawEnabled: false,
+    };
 
     switch (element.type) {
       case "freePath":
@@ -84,13 +162,12 @@ export const Canvas = ({
             lineCap="round"
             lineJoin="round"
             tension={0.5}
-            perfectDrawEnabled={false}
-            listening={false}
             globalCompositeOperation={
               element.strokeColor === "#ffffff"
                 ? "destination-out"
                 : "source-over"
             }
+            {...commonProps}
           />
         );
 
@@ -103,8 +180,7 @@ export const Canvas = ({
             stroke={element.strokeColor || "#000000"}
             strokeWidth={element.strokeWidth || 2}
             lineCap="round"
-            perfectDrawEnabled={false}
-            listening={false}
+            {...commonProps}
           />
         );
 
@@ -119,7 +195,7 @@ export const Canvas = ({
             fill={element.fillColor || "transparent"}
             stroke={element.strokeColor || "#000000"}
             strokeWidth={element.strokeWidth || 2}
-            listening={false}
+            {...commonProps}
           />
         );
 
@@ -133,7 +209,7 @@ export const Canvas = ({
             fill={element.fillColor || "transparent"}
             stroke={element.strokeColor || "#000000"}
             strokeWidth={element.strokeWidth || 2}
-            listening={false}
+            {...commonProps}
           />
         );
 
@@ -150,20 +226,34 @@ export const Canvas = ({
         width={width}
         height={height}
         onMouseDown={(e) => {
-          // console.log('Stage mouse down');
           handleMouseEvent(e, onMouseDown);
         }}
         onMouseMove={(e) => {
           handleMouseEvent(e, onMouseMove);
         }}
         onMouseUp={(e) => {
-          // console.log('Stage mouse up');
           onMouseUp();
         }}
         className={styles.stage}
       >
         <Layer>
-          {elements.map((element, index) => renderElement(element, index))}
+          {/* Рендерим элементы послойно, от нижнего к верхнему */}
+          {getSortedElements().map((layerGroup) => {
+            // Пропускаем невидимые слои
+            if (!layerGroup.isVisible) {
+              console.log(`⚠️ Skipping invisible layer: ${layerGroup.layerId}`);
+              return null;
+            }
+
+            console.log(
+              `🎨 Rendering layer ${layerGroup.layerId} (order: ${layerGroup.order}, opacity: ${layerGroup.opacity})`
+            );
+
+            // Рендерим элементы слоя
+            return layerGroup.elements.map((element) =>
+              renderElement(element, layerGroup.opacity)
+            );
+          })}
         </Layer>
       </Stage>
     </Pane>
