@@ -9,3 +9,7 @@ export { CanvasContainer } from "./canvas-container/canvas-container";
 export { EnhancedHistoryPanel } from "./enhanced-history-panel/enhanced-history-panel";
 export { LayersManager } from "./layers-manager/layers-manager";
 export { EnhancedToolsPanel } from "./enhanced-tool-panel/enhanced-tool-panel";
+
+export type { CanvasHandle } from "./canvas/canvas";
+
+export type { CanvasContainerHandle } from "./canvas-container/canvas-container";
