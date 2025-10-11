@@ -54,10 +54,14 @@ export const Editor = ({ projectId }: EditorProps) => {
   return (
     <Pane display="flex" flexDirection="column" height="100vh">
       {/* ОБНОВЛЕНО: Передаем stageRef и projectName в TopMenu */}
-      <TopMenu stageRef={getCanvasStageRef()} projectName={projectName} />
+      <TopMenu
+        stageRef={getCanvasStageRef()}
+        projectName={projectName}
+        projectId={projectId}
+      />
 
       <DndProvider backend={HTML5Backend}>
-        <EnhancedToolsPanel projectId={projectId} />
+        <EnhancedToolsPanel />
         <Pane display="flex" flex={1}>
           <CanvasContainer
             ref={canvasContainerRef}

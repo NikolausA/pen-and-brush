@@ -8,9 +8,10 @@ import { useNavigate } from "react-router-dom";
 interface TopMenuProps {
   stageRef?: React.RefObject<CanvasHandle> | null;
   projectName?: string;
+  projectId?: string;
 }
 
-export const TopMenu = ({ stageRef, projectName }: TopMenuProps) => {
+export const TopMenu = ({ stageRef, projectName, projectId }: TopMenuProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [createProject] = useCreateProjectMutation();
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ export const TopMenu = ({ stageRef, projectName }: TopMenuProps) => {
           onCreateProject={handleCreateProject}
           stageRef={stageRef}
           projectName={projectName}
+          projectId={projectId}
         />
         <Heading size={600}>Имя проекта: {projectName}</Heading>
       </Pane>

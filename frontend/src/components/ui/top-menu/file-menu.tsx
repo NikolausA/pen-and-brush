@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CanvasHandle } from "@/components/smart";
 import { Pane, Popover, Menu, Button, toaster } from "evergreen-ui";
-import { Download } from "lucide-react";
+import { Download, Save } from "lucide-react";
 import { NewProjectModal } from "@/components/simple";
 import { exportStageToPNG } from "@/core/utils/exportCanvas";
 
@@ -14,32 +14,72 @@ interface FileMenuProps {
     width: number,
     height: number
   ) => Promise<void>;
-  // НОВОЕ: Добавлены props для экспорта
   stageRef?: React.RefObject<CanvasHandle> | null;
   projectName?: string;
+  projectId?: string;
+  onSave?: () => Promise<void>;
 }
 
 export const FileMenu = ({
   isModalOpen,
   setIsModalOpen,
   onCreateProject,
-  stageRef, // НОВОЕ
-  projectName = "drawing", // НОВОЕ
+  stageRef,
+  projectName = "drawing",
+  projectId,
+  onSave,
 }: FileMenuProps) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false); // НОВОЕ
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // НОВОЕ
 
-  function saveProject() {
-    console.log("save");
-  }
-
-  // ОБНОВЛЕНО: Полная реализация экспорта
-  const handleExport = async () => {
-    // Закрываем меню перед началом экспорта
+  // НОВОЕ: Реализация сохранения проекта
+  const saveProject = async () => {
     setIsMenuOpen(false);
 
-    // Проверяем наличие ref на Stage
+    if (!projectId) {
+      toaster.warning("Проект не найден", {
+        description: "Невозможно сохранить проект",
+        duration: 3,
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Если передан callback от родителя, используем его
+      if (onSave) {
+        await onSave();
+        toaster.success("Проект сохранен", {
+          description: "Все изменения успешно сохранены",
+          duration: 3,
+        });
+      } else {
+        // Автоматическое сохранение уже происходит при каждом изменении
+        toaster.success("Проект сохранен", {
+          description: "Изменения сохраняются автоматически",
+          duration: 3,
+        });
+      }
+
+      console.log("✅ Project saved:", projectId);
+    } catch (error) {
+      console.error("❌ Save error:", error);
+      toaster.danger("Ошибка при сохранении проекта", {
+        description:
+          error instanceof Error ? error.message : "Неизвестная ошибка",
+        duration: 5,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setIsMenuOpen(false);
+
     if (!stageRef || !stageRef.current) {
       toaster.warning("Canvas не готов к экспорту", {
         description: "Пожалуйста, подождите загрузки редактора",
@@ -52,24 +92,21 @@ export const FileMenu = ({
     setIsExporting(true);
 
     try {
-      // Получаем Stage из ref
       const stage = stageRef.current.getStage();
 
       if (!stage) {
         throw new Error("Stage not found");
       }
 
-      // Генерируем имя файла с датой и временем
       const timestamp = new Date()
         .toISOString()
         .slice(0, 19)
         .replace(/:/g, "-");
       const fileName = `${projectName}_${timestamp}.png`;
 
-      // Экспортируем с высоким качеством
       const result = exportStageToPNG(stage, {
         fileName,
-        pixelRatio: 3, // Высокое качество
+        pixelRatio: 3,
         quality: 1,
       });
 
@@ -105,8 +142,14 @@ export const FileMenu = ({
             <Menu.Item onSelect={() => setIsModalOpen(true)}>
               Новый проект
             </Menu.Item>
-            <Menu.Item onSelect={saveProject}>Сохранить</Menu.Item>
-            {/* ОБНОВЛЕНО: Добавлена иконка и индикатор загрузки */}
+            {/* ОБНОВЛЕНО: Добавлена иконка и состояние загрузки */}
+            <Menu.Item
+              icon={<Save size={14} />}
+              onSelect={saveProject}
+              disabled={isSaving || !projectId}
+            >
+              {isSaving ? "Сохранение..." : "Сохранить"}
+            </Menu.Item>
             <Menu.Item
               icon={<Download size={14} />}
               onSelect={handleExport}
