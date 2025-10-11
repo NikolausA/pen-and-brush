@@ -1,7 +1,13 @@
-import { useState, useCallback, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/core/store";
-import { Canvas } from "@/components/smart";
+import { Canvas, type CanvasHandle } from "@/components/smart";
 import type {
   GraphicObject,
   GraphicObjectType,
@@ -16,10 +22,14 @@ interface CanvasContainerProps {
   layersData: Layer[] | undefined;
 }
 
-export const CanvasContainer = ({
-  projectId,
-  activeLayerId,
-}: CanvasContainerProps) => {
+export interface CanvasContainerHandle {
+  getCanvasRef: () => React.RefObject<CanvasHandle>;
+}
+
+const CanvasContainerWithRef = forwardRef<
+  CanvasContainerHandle,
+  CanvasContainerProps
+>(({ projectId, activeLayerId }, ref) => {
   const activeTool = useSelector((state: RootState) => state.tool.activeTool);
   const activeColor = useSelector((state: RootState) => state.tool.strokeColor);
   const { data: layersData = [], refetch: refetchLayers } =
@@ -31,6 +41,12 @@ export const CanvasContainer = ({
   const [draft, setDraft] = useState<GraphicObject | null>(null);
   const isDrawingRef = useRef(false);
   const nextId = useRef(0);
+  const canvasRef = useRef<CanvasHandle>(null);
+
+  // Предоставляем доступ к canvasRef родителю
+  useImperativeHandle(ref, () => ({
+    getCanvasRef: () => canvasRef,
+  }));
 
   const { visibleElements } = useGraphicsData({
     layersData: layersData || [],
@@ -62,30 +78,13 @@ export const CanvasContainer = ({
 
   const handleMouseDown = useCallback(
     (pos: { x: number; y: number }) => {
-      console.log(
-        "Mouse down at:",
-        pos,
-        "Active layer:",
-        activeLayerId,
-        "Tool:",
-        activeTool
-      );
-
       if (!layersData || !activeLayerId || !activeLayer) {
-        console.warn("Missing required data:", {
-          layersData: !!layersData,
-          activeLayerId,
-          activeLayer: !!activeLayer,
-        });
         return;
       }
 
       isDrawingRef.current = true;
       const id = `element-${Date.now()}-${nextId.current++}`;
       const graphicType = mapToolToGraphicType(activeTool);
-
-      // Получаем прозрачность активного слоя для нового объекта
-      const layerOpacity = activeLayer.opacity || 100;
 
       let newDraft: GraphicObject;
 
@@ -98,7 +97,7 @@ export const CanvasContainer = ({
             strokeColor: activeTool === "eraser" ? "#ffffff" : activeColor,
             strokeWidth: activeTool === "eraser" ? 20 : 5,
             points: [pos.x, pos.y],
-            opacity: 100, // Объект по умолчанию непрозрачный
+            opacity: 100,
           };
           break;
 
@@ -158,7 +157,6 @@ export const CanvasContainer = ({
           break;
       }
 
-      console.log("Created draft:", newDraft, "Layer opacity:", layerOpacity);
       setDraft(newDraft);
     },
     [
@@ -171,6 +169,7 @@ export const CanvasContainer = ({
     ]
   );
 
+  // ИСПРАВЛЕНО: Обернули const в блоки для case
   const handleMouseMove = useCallback(
     (pos: { x: number; y: number }) => {
       if (!isDrawingRef.current || !draft) return;
@@ -181,21 +180,23 @@ export const CanvasContainer = ({
         let updatedDraft: GraphicObject;
 
         switch (prev.type) {
-          case "freePath":
+          case "freePath": {
             updatedDraft = {
               ...prev,
               points: [...(prev.points || []), pos.x, pos.y],
             };
             break;
+          }
 
-          case "line":
+          case "line": {
             updatedDraft = {
               ...prev,
               points: [prev.points[0], prev.points[1], pos.x, pos.y],
             };
             break;
+          }
 
-          case "rect":
+          case "rect": {
             const startX = prev.x || 0;
             const startY = prev.y || 0;
             updatedDraft = {
@@ -206,8 +207,9 @@ export const CanvasContainer = ({
               height: Math.abs(pos.y - startY),
             };
             break;
+          }
 
-          case "circle":
+          case "circle": {
             const dx = pos.x - (prev.x || 0);
             const dy = pos.y - (prev.y || 0);
             updatedDraft = {
@@ -215,10 +217,12 @@ export const CanvasContainer = ({
               radius: Math.sqrt(dx * dx + dy * dy),
             };
             break;
+          }
 
-          default:
+          default: {
             updatedDraft = prev;
             break;
+          }
         }
 
         return updatedDraft;
@@ -228,8 +232,6 @@ export const CanvasContainer = ({
   );
 
   const handleMouseUp = useCallback(async () => {
-    console.log("Mouse up, isDrawing:", isDrawingRef.current, "draft:", draft);
-
     if (!isDrawingRef.current || !draft || !activeLayer) {
       isDrawingRef.current = false;
       setDraft(null);
@@ -238,7 +240,6 @@ export const CanvasContainer = ({
 
     isDrawingRef.current = false;
 
-    // Валидация
     let isValid = true;
     if (
       draft.type === "freePath" &&
@@ -260,12 +261,9 @@ export const CanvasContainer = ({
     }
 
     if (!isValid) {
-      console.warn("Invalid draft, skipping save:", draft);
       setDraft(null);
       return;
     }
-
-    console.log("Finalizing draft:", draft);
 
     try {
       const currentLayerData = Array.isArray(activeLayer.data)
@@ -274,31 +272,18 @@ export const CanvasContainer = ({
 
       const updatedData = [...currentLayerData, draft];
 
-      console.log("Updating layer with data:", updatedData);
-
-      // Обновляем слой
       await updateLayer({
         layerId: activeLayer.id,
         projectId: projectId,
         data: { data: updatedData },
       }).unwrap();
 
-      // Рефетчим для гарантии актуальности
       await refetchLayers();
-
       const freshLayers = await refetchLayers().unwrap();
 
-      console.log(
-        "🔍 [MOUSEUP] Layer updated, object IDs:",
-        freshLayers[0]?.data?.map((o: any) => o.id) || "No data"
-      );
-
-      console.log("💾 [HISTORY] Saving snapshot AFTER object creation");
       addToHistory(`Добавлен элемент: ${draft.type}`, {
         layers: freshLayers,
       });
-
-      console.log("Layer updated and history saved successfully");
     } catch (error) {
       console.error("Error updating layer:", error);
     }
@@ -306,10 +291,6 @@ export const CanvasContainer = ({
     setDraft(null);
   }, [draft, activeLayer, projectId, updateLayer, refetchLayers, addToHistory]);
 
-  console.log("Visible elements:", visibleElements);
-  console.log("Layers data with opacity:", layersData);
-
-  // Подготавливаем данные слоев для Canvas
   const layersForCanvas = layersData.map((layer) => ({
     id: layer.id,
     opacity: layer.opacity || 100,
@@ -319,6 +300,7 @@ export const CanvasContainer = ({
 
   return (
     <Canvas
+      ref={canvasRef}
       width={window.innerWidth - 300}
       height={window.innerHeight - 60}
       elements={visibleElements}
@@ -329,4 +311,9 @@ export const CanvasContainer = ({
       layersData={layersForCanvas}
     />
   );
-};
+});
+
+CanvasContainerWithRef.displayName = "CanvasContainer";
+
+// Экспортируем компонент и типы
+export { CanvasContainerWithRef as CanvasContainer };

@@ -32,6 +32,52 @@ router.get("/projects", async (req, res) => {
 
 /**
  * @swagger
+ * /projects/{projectId}:
+ *   get:
+ *     summary: Get a project by ID
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the project
+ *     responses:
+ *       200:
+ *         description: Project details
+ */
+router.get("/projects/:projectId", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Валидация UUID
+    if (!isUUID(projectId)) {
+      return res
+        .status(400)
+        .json({ error: "Bad request", message: "Invalid projectId format" });
+    }
+
+    // Ищем проект
+    const project = await Project.findByPk(projectId, {
+      include: [{ model: Layer, as: "layers" }],
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    res.json(project);
+  } catch (error) {
+    console.error("Error getting project by ID:", error);
+    res
+      .status(500)
+      .json({ error: "Internal server error", message: error.message });
+  }
+});
+
+/**
+ * @swagger
  * /projects:
  *   post:
  *     summary: Create a project

@@ -1,40 +1,63 @@
-import { useState } from 'react';
-import { Pane } from 'evergreen-ui';
-import { FileMenu } from './file-menu';
-import { EditMenu } from './edit-menu';
+import { useState } from "react";
+import type { CanvasHandle } from "@/components/smart";
+import { Pane, Heading } from "evergreen-ui";
+import { FileMenu } from "@/components/ui/top-menu/file-menu";
+import { useCreateProjectMutation } from "@/core/store/api";
+import { useNavigate } from "react-router-dom";
 
-export const TopMenu = () => {
+interface TopMenuProps {
+  stageRef?: React.RefObject<CanvasHandle> | null;
+  projectName?: string;
+}
+
+export const TopMenu = ({ stageRef, projectName }: TopMenuProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [createProject] = useCreateProjectMutation();
+  const navigate = useNavigate();
 
-  function undo() {
-    console.log('undo');
-  }
+  const handleCreateProject = async (
+    name: string,
+    width: number,
+    height: number
+  ) => {
+    try {
+      const newProject = await createProject({
+        name,
+        width,
+        height,
+      }).unwrap();
 
-  function redo() {
-    console.log('redo');
-  }
+      console.log("Project created:", newProject);
+      setIsModalOpen(false);
 
-  const handleCreateProject = () => {
-    const newProjectId = crypto.randomUUID();
-    console.log('create project', newProjectId);
+      // Переход на новый проект
+      navigate(`/editor/${newProject.id}`);
+    } catch (error) {
+      console.error("Failed to create project:", error);
+    }
   };
 
   return (
     <Pane
-      background="tint1"
-      borderBottom
-      paddingX={16}
-      paddingY={8}
       display="flex"
-      gap={16}
-      zIndex={9999}
+      alignItems="center"
+      justifyContent="space-between"
+      padding={12}
+      borderBottom="default"
+      background="white"
+      height={60}
     >
-      <FileMenu
-        isModalOpen={isModalOpen}
-        setIsModalOpen={setIsModalOpen}
-        onCreateProject={handleCreateProject}
-      />
-      <EditMenu undo={undo} redo={redo} />
+      <Pane display="flex" alignItems="center" gap={16}>
+        {/* ОБНОВЛЕНО: Передаем stageRef и projectName в FileMenu */}
+        <FileMenu
+          isModalOpen={isModalOpen}
+          setIsModalOpen={setIsModalOpen}
+          onCreateProject={handleCreateProject}
+          stageRef={stageRef}
+          projectName={projectName}
+        />
+        <Heading size={600}>Имя проекта: {projectName}</Heading>
+      </Pane>
     </Pane>
   );
 };
