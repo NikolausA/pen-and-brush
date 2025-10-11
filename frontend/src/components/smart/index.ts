@@ -1,0 +1,15 @@
+export { Canvas } from "./canvas/canvas";
+export { ProjectList } from "./project-list";
+export { ToolsPanel } from "./tools-panel/tools-panel";
+export { HistoryList } from "./history-list/history-list";
+export { LayerCreator } from "./layer-creator/layer-creator";
+export { LayersList } from "./layers-list/layers-list";
+export { OpacityControl } from "./opacity-control/opacity-control";
+export { CanvasContainer } from "./canvas-container/canvas-container";
+export { EnhancedHistoryPanel } from "./enhanced-history-panel/enhanced-history-panel";
+export { LayersManager } from "./layers-manager/layers-manager";
+export { EnhancedToolsPanel } from "./enhanced-tool-panel/enhanced-tool-panel";
+
+export type { CanvasHandle } from "./canvas/canvas";
+
+export type { CanvasContainerHandle } from "./canvas-container/canvas-container";

@@ -1,0 +1,67 @@
+.container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f5f5; 
+  position: relative;
+  overflow: hidden; /* Предотвращаем скролл */
+}
+
+.stage {
+  border: 2px solid #e1e4e8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
+  /* Фиксируем позицию при масштабировании */
+  position: relative;
+  
+  /* Стили курсора */
+  &[data-tool="brush"] {
+    cursor: crosshair;
+  }
+  
+  &[data-tool="eraser"] {
+    cursor: grab;
+  }
+  
+  &[data-tool="line"],
+  &[data-tool="rectangle"], 
+  &[data-tool="circle"] {
+    cursor: crosshair;
+  }
+  
+  /* Предотвращаем выделение текста и drag & drop */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Стили для контейнера при активном рисовании */
+.container.drawing {
+  .stage {
+    cursor: crosshair !important;
+  }
+}
+
+/* Адаптивность для разных размеров экрана */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+  
+  .stage {
+    border-width: 1px;
+    border-radius: 4px;
+  }
+}
+
+/* Стили для предотвращения "дрожания" при масштабировании */
+.stage canvas {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}

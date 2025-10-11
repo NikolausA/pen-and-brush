@@ -1,12 +1,22 @@
-import { type RouteObject, createBrowserRouter } from 'react-router';
+import { type RouteObject, createBrowserRouter } from "react-router-dom";
+import { Home, EditorPage, TempEditorPage, } from "@/pages";
 
-import { Dashboard } from '@/pages/dashboard/dashboard';
-
-export const routes: RouteObject[] = [ 
+export const routes: RouteObject[] = [
   {
-    path: '/dashboard',
-    element: <Dashboard/>,
-  } 
+    path: "/",
+    element: <Home />,
+    errorElement: <div>Ошибка загрузки главной страницы</div>,
+  },
+  {
+    path: "/projects/:projectId",
+    element: <EditorPage />,
+    errorElement: <div>Проект не найден</div>,
+  },
+  {
+    path: "/temp-page",
+    element: <TempEditorPage />,
+    errorElement: <div>Проект не найден</div>,
+  },
 ];
 
 export const router = createBrowserRouter(routes);
